@@ -31,7 +31,7 @@ with sync_playwright() as p:
     b=p.chromium.launch(); dev=dict(p.devices["iPhone 13"]); dev["device_scale_factor"]=2
     ctx=b.new_context(**dev); pg=ctx.new_page(); errs=[]
     pg.on("pageerror",lambda e: errs.append(str(e)))
-    pg.goto("http://localhost:8765/index.html?heute=2026-12-02")
+    pg.goto("http://localhost:8765/index.html?heute=2026-12-09")
     pg.evaluate("s=>{localStorage.setItem('franz-fitness-app-v1',JSON.stringify(s))}",S); pg.reload(); pg.wait_for_timeout(500)
     pg.evaluate("()=>{FF.S().seen=FF.badges().filter(b=>b.on).map(b=>b.id);FF.S().lvl=FF.xpInfo().lvl;FF.S().okSeen=[1,2,3,4,5];FF.save()}")
     pg.reload(); pg.wait_for_timeout(500)
