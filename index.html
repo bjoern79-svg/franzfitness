@@ -126,7 +126,7 @@ const IMG={"brustpresse": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2w
 "use strict";
 /* Franz Fitness App v1: Daten nur lokal (localStorage), keine externen Requests */
 const KEY = "franz-fitness-app-v1";
-const START = new Date(2026, 10, 2); // Mo 2.11.2026
+const START = new Date(2026, 10, 9); // Mo 9.11.2026 (Start um 1 Woche verschoben, vorher 2.11.)
 const TOTAL = 21;
 const EXD = {}; EXDATA.forEach(e => EXD[e.id] = e);
 const DAYN = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
@@ -134,7 +134,7 @@ const DAYL = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samsta
 const KG_T = [[0, 113], [4, 111], [8, 109], [12, 107], [16, 104.5], [20, 102.5], [21, 102]];
 const BF_T = [[0, 29.2], [4, 27.5], [8, 26], [12, 24.5], [16, 22.5], [20, 20.5], [21, 19.8]];
 const CHECKW = [4, 8, 12, 16, 20, 21];
-const TRAVEL = [3, 5, 7], HOLI = [8, 9, 21];
+const TRAVEL = [2, 4, 6], HOLI = [7, 8, 20, 21];
 // Plan laut Karte 02: s = [Saetze Wo 1 bis 3, ab Wo 4], p = Pause in s, inc = Steigerung
 const UNITS = {
   A: [{ id: "brustpresse", s: [2, 3], p: 120, inc: "+2,5 kg" }, { id: "schraegbank", s: [2, 2], p: 90, inc: "nächste Hantel (ca. +2 kg)" },
@@ -149,26 +149,27 @@ const UNITS = {
 const OPTIONAL_A = ["plank", "deadbug"];
 // Ersatztermine laut Karte 09 (d = Tag in der Woche, 0 = Mo)
 const OVR = {
-  "3:0": { n: "Dienstreise Feldkirch ab 13:00: nur trainieren, wenn die Abreise wirklich erst mittags ist, sonst Hotel Workout." },
-  "3:1": { d: 4, n: "Ersatz für Mi 18.11. (Reise, Buß und Bettag)." },
-  "3:2": { d: 6, n: "So 22.11. empfohlen, damit nach Fr ein Ruhetag liegt." },
-  "7:1": { hotel: true, n: "Reise: Mi 16.12. nur Hotel Workout, 20 bis 30 Minuten." },
-  "7:2": { d: 6, n: "Ersatz für Sa 19.12. (Rückreise)." },
-  "8:2": { n: "Feiertage: Sa 26. oder So 27.12., Studio Öffnung bitte vorher prüfen." },
-  "9:2": { n: "Neujahr: Sa 2.1. oder So 3.1., Studio Öffnung bitte prüfen." },
-  "21:2": { d: 5, n: "Sa 27.3. trainieren, So 28.3. ist Ostersonntag. Abschluss Check vorziehen." }
+  "2:0": { n: "Dienstreise Feldkirch ab 13:00: nur trainieren, wenn die Abreise wirklich erst mittags ist, sonst Hotel Workout." },
+  "2:1": { d: 4, n: "Ersatz für Mi 18.11. (Reise, Buß und Bettag)." },
+  "2:2": { d: 6, n: "So 22.11. empfohlen, damit nach Fr ein Ruhetag liegt (Sa 21.11. Kabarett)." },
+  "6:1": { hotel: true, n: "Reise: Mi 16.12. nur Hotel Workout, 20 bis 30 Minuten." },
+  "6:2": { d: 6, n: "Ersatz für Sa 19.12. (Rückreise)." },
+  "7:2": { n: "Feiertage: Sa 26. oder So 27.12., Studio Öffnung bitte vorher prüfen." },
+  "8:2": { n: "Neujahr: Sa 2.1. oder So 3.1., Studio Öffnung bitte prüfen." },
+  "20:2": { d: 5, n: "Sa 27.3. trainieren, So 28.3. ist Ostersonntag." },
+  "21:0": { n: "Ostermontag: Studio Öffnung prüfen. Wenn zu, auf Di 30.3. verschieben und die Mi Einheit auf Fr 2.4. (Mehr, Einheit verschieben)." },
+  "21:2": { n: "Letzte Einheit. Danach Abschluss Check am So 4.4." }
 };
 const NOTES = {
-  3: "Dienstreise Feldkirch Mo 16.11. 13:00 bis Mi 18.11. Mi entfällt, Ersatz Fr 20.11. früh.",
-  4: "Check Woche 4: Gewicht, Taille und Körperfett am So 29.11.",
-  5: "Weihnachtsfeier Rudolstadt Do 3.12. bis Fr 4.12. Schwimmen Do 7:45 vor der Abreise, Fr kein Training.",
-  7: "Reise Di 15.12. bis Sa 19.12.: Mi Hotel Workout, Do kein Schwimmen, Sa entfällt, Ersatz So 20.12.",
-  8: "Feiertage, Öffnungszeiten CrunchFit prüfen. Check Woche 8 am So 27.12.",
-  9: "Neujahr: Training Sa 2.1. oder So 3.1., Öffnung prüfen.",
-  12: "Deload Woche: je Übung 1 Satz weniger, Gewicht gleich oder bis 10 % leichter. Check am So 24.1.",
-  16: "Check Woche 16 am So 21.2.",
-  20: "Check Woche 20 am So 21.3.",
-  21: "Karfreitag 26.3., Ostersonntag 28.3. Training Mo, Mi, Sa 27.3., Abschluss Check Sa 27.3."
+  2: "Dienstreise Feldkirch Mo 16.11. 13:00 bis Mi 18.11. (Buß und Bettag). Mi entfällt, Ersatz Fr 20.11. früh. Sa 21.11. Kabarett, besser So 22.11.",
+  4: "Weihnachtsfeier Rudolstadt Do 3.12. bis Fr 4.12.: Schwimmen Do 7:45 vor der Abreise, Fr kein Training und kein Joggen. Check Woche 4 am So 6.12.",
+  6: "Reise Di 15.12. bis Sa 19.12.: Mi Hotel Workout, Do kein Schwimmen, Sa entfällt, Ersatz So 20.12.",
+  7: "Weihnachten: Öffnungszeiten CrunchFit und Sportbad prüfen (Do 24.12., Fr 25.12., Sa 26.12.).",
+  8: "Silvester und Neujahr: Training Sa 2.1. oder So 3.1., Öffnung prüfen. Check Woche 8 am So 3.1.",
+  12: "Deload Woche: je Übung 1 Satz weniger, Gewicht gleich oder bis 10 % leichter. Check am So 31.1.",
+  16: "Check Woche 16 am So 28.2.",
+  20: "Gründonnerstag 25.3., Karfreitag 26.3., Ostersonntag 28.3.: Training Mo, Mi, Sa 27.3. Check Woche 20 am So 28.3. Ab 28.3. Sommerzeit.",
+  21: "Ostermontag 29.3.: Studio Öffnung prüfen, sonst Di 30.3. und Fr 2.4. (dann kein Joggen). Abschluss Check am So 4.4."
 };
 const SPRUECHE = ["Der Start zählt. Brust raus, Plan steht.", "Erst Technik, dann Tonnen.", "Kleine Schritte, große Kurve.",
   "Woche 4: Der erste Check wartet, dein Körper merkt schon mehr als die Waage.", "Konstanz schlägt Motivation.",
@@ -372,7 +373,7 @@ function unitName(u) { return u === "H" ? "Hotel Workout" : "Einheit " + u; }
 function vHeute() {
   const t = today(), w0 = weekOf(t);
   let h = "";
-  if (w0 < 1) h += `<div class="card hero"><div class="sm mu">Countdown</div><div class="big">Noch ${Math.round((START - t) / 864e5)} Tage bis zum Start</div><div class="sm" style="margin-top:6px">Woche 1 beginnt am Mo 2.11.2026 mit Einheit A. Du kannst dir die Übungen schon anschauen.</div></div>`;
+  if (w0 < 1) h += `<div class="card hero"><div class="sm mu">Countdown</div><div class="big">Noch ${Math.round((START - t) / 864e5)} Tage bis zum Start</div><div class="sm" style="margin-top:6px">Woche 1 beginnt am Mo 9.11.2026 mit Einheit A. Du kannst dir die Übungen schon anschauen.</div></div>`;
   if (w0 > TOTAL) h += `<div class="card hero"><div class="big">Plan geschafft! 🎉</div><div class="sm">21 Wochen sind vorbei. Schau in Fortschritt und Erfolge, was du erreicht hast.</div></div>`;
   const w = Math.min(TOTAL, Math.max(1, w0));
   const ws = weekSess(w); let cur = ws.find(x => same(x.date, t));
@@ -432,13 +433,13 @@ function vActs(w, t) {
   ${tickRow(w + ":pr" + d, "Eiweiß heute: 160 bis 190 g", "3 bis 4 eiweißreiche Mahlzeiten · +" + XP.prot + " XP", act(w, "pr" + d))}
   ${tickRow(w + ":sw", "Schwimmen (meist Do 7:45)", "Locker, Zone 2 · +" + XP.swim + " XP", act(w, "sw"))}
   ${tickRow(w + ":jo", "Joggen locker", "Gehen und Joggen im Wechsel, nie am Tag nach Beinen · +" + XP.jog + " XP", act(w, "jo"))}
-  ${tickRow(w + ":hw", "Hotel Workout" + (travel ? " (Reisewoche)" : ""), (travel ? "Zählt mit 1 Studio Einheit für den Streak" : "Zählt nur in Reisewochen (3, 5, 7) für den Streak") + " · +" + XP.hotel + " XP", act(w, "hw"))}
+  ${tickRow(w + ":hw", "Hotel Workout" + (travel ? " (Reisewoche)" : ""), (travel ? "Zählt mit 1 Studio Einheit für den Streak" : "Zählt nur in Reisewochen (2, 4, 6) für den Streak") + " · +" + XP.hotel + " XP", act(w, "hw"))}
   </div>`;
 }
 function vWoche() {
   const cw = weekOf(today()), st = stats();
   let h = `<div class="card"><h2>🔥 Streak</h2><div class="kpi"><div><b>${st.weekStreak}</b><span>Wochen in Folge</span></div><div><b>${st.sessStreak}</b><span>Einheiten in Folge</span></div><div><b>${st.total}/63</b><span>Krafteinheiten</span></div></div>
-   <div class="xs mu" style="margin-top:8px">Eine Woche zählt mit mindestens 2 von 3 Krafteinheiten. Reisewochen (3, 5, 7): 1 Einheit plus Hotel Workout reicht.</div>
+   <div class="xs mu" style="margin-top:8px">Eine Woche zählt mit mindestens 2 von 3 Krafteinheiten. Reisewochen (2, 4, 6): 1 Einheit plus Hotel Workout reicht.</div>
    <div class="prog" style="margin-top:10px"><i style="width:${Math.round(100 * Math.min(21, Math.max(0, cw)) / 21)}%"></i></div><div class="xs mu" style="margin-top:4px">Woche ${Math.max(0, Math.min(21, cw))} von 21</div></div>`;
   h += `<div class="card"><h2>Wochenübersicht 1 bis 21</h2>`;
   for (let w = 1; w <= TOTAL; w++) {
@@ -478,7 +479,7 @@ function vFort() {
   const kgP = [[0, 113]], bfP = [[0, 29.2]], waP = [];
   for (let i = 0; i <= TOTAL; i++) { const a = num(S.meas[i + ":kg"]), b = num(S.meas[i + ":bf"]), c = num(S.meas[i + ":wa"]); if (a > 0 && i > 0) kgP.push([i, a]); if (b > 0 && i > 0) bfP.push([i, b]); if (c > 0) waP.push([i, c]); }
   const tg = interp(KG_T, w), tb = interp(BF_T, w);
-  let h = `<div class="card"><h2>📏 Messwerte eintragen</h2><div class="row sp"><button class="btn sec" data-pw="${Math.max(0, w - 1)}">◀</button><div style="text-align:center"><b>${w === 0 ? "Startwerte (Woche 0)" : "Woche " + w}</b><div class="xs mu">${w ? fmt(wDate(w, 0)) + " bis " + fmt(wDate(w, 6)) : "vor dem 2.11."}${CHECKW.includes(w) ? " · Check Woche" : ""}</div></div><button class="btn sec" data-pw="${Math.min(TOTAL, w + 1)}">▶</button></div>
+  let h = `<div class="card"><h2>📏 Messwerte eintragen</h2><div class="row sp"><button class="btn sec" data-pw="${Math.max(0, w - 1)}">◀</button><div style="text-align:center"><b>${w === 0 ? "Startwerte (Woche 0)" : "Woche " + w}</b><div class="xs mu">${w ? fmt(wDate(w, 0)) + " bis " + fmt(wDate(w, 6)) : "vor dem 9.11."}${CHECKW.includes(w) ? " · Check Woche" : ""}</div></div><button class="btn sec" data-pw="${Math.min(TOTAL, w + 1)}">▶</button></div>
   <div class="grid3" style="margin-top:10px"><div><label class="f">Gewicht kg</label><input inputmode="decimal" data-meas="${w}:kg" value="${esc(S.meas[w + ":kg"] || "")}" placeholder="${w ? "Ziel " + f1(tg) : "113"}"></div>
   <div><label class="f">Taille cm</label><input inputmode="decimal" data-meas="${w}:wa" value="${esc(S.meas[w + ":wa"] || "")}" placeholder="${w ? "Nabelhöhe" : "Startwert"}"></div>
   <div><label class="f">Körperfett %${CHECKW.includes(w) ? " ⭐" : ""}</label><input inputmode="decimal" data-meas="${w}:bf" value="${esc(S.meas[w + ":bf"] || "")}" placeholder="${w ? "Ziel " + f1(tb) : "29,2"}"></div></div>
@@ -528,7 +529,7 @@ function vMehr() {
   <div class="card"><h2>💾 Daten</h2><div class="sm mu">Alles bleibt auf diesem Gerät (localStorage). Exportiere regelmäßig als Sicherung, z.B. nach jedem Check.</div>
   <div class="grid2" style="margin-top:10px"><button class="btn sec" data-export>Exportieren</button><label class="btn sec">Importieren<input type="file" accept="application/json,.json" data-import style="display:none"></label></div>
   <button class="btn warn full" style="margin-top:8px" data-reset>Alle Daten zurücksetzen</button></div>
-  <div class="card"><h2>ℹ️ Über die App</h2><div class="sm">Franz Fitness v1 · Plan Woche 1 bis 21 (Mo 2.11.2026 bis So 28.3.2027). Offline, ohne Konto, ohne Tracker. Übungsbilder sind Illustrationen, keine Einweisung. Alle Zahlen sind Richtwerte, bei Beschwerden Arzt fragen.</div></div>`;
+  <div class="card"><h2>ℹ️ Über die App</h2><div class="sm">Franz Fitness v2 · Plan Woche 1 bis 21 (Mo 9.11.2026 bis So 4.4.2027). Offline, ohne Konto, ohne Tracker. Übungsbilder sind Illustrationen, keine Einweisung. Alle Zahlen sind Richtwerte, bei Beschwerden Arzt fragen.</div></div>`;
 }
 function guide(id) {
   const e = EXD[id];

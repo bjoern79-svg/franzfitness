@@ -1,0 +1,197 @@
+[
+ [
+  "Laden ohne Konsolenfehler",
+  true,
+  ""
+ ],
+ [
+  "Heute zeigt Einheit A am Mo 9.11.",
+  true,
+  ""
+ ],
+ [
+  "Woche 1 Übungen A",
+  true,
+  "6"
+ ],
+ [
+  "Satz gespeichert",
+  true,
+  ""
+ ],
+ [
+  "Pausentimer läuft",
+  true,
+  "1:59"
+ ],
+ [
+  "XP für Satz (5 XP)",
+  true,
+  "5"
+ ],
+ [
+  "Neuladen behält Gewicht",
+  true,
+  ""
+ ],
+ [
+  "Neuladen behält Haken",
+  true,
+  ""
+ ],
+ [
+  "Anleitung öffnet",
+  true,
+  ""
+ ],
+ [
+  "Streak 4 Wochen (Reisewoche 2 mit 1 Einheit plus Hotel)",
+  true,
+  "{\"weekStreak\": 4, \"bestWeek\": 4, \"sessStreak\": 1, \"total\": 9}"
+ ],
+ [
+  "Krafteinheiten 9 (8 plus Hotel Bonus)",
+  true,
+  ""
+ ],
+ [
+  "XP 640 = 8x50 + 40 Hotel + 4x50 Streakwochen",
+  true,
+  "640"
+ ],
+ [
+  "Level 3 Kabelzug Flüsterer",
+  true,
+  "Kabelzug Flüsterer"
+ ],
+ [
+  "Abzeichen b1 b2 b3 b5 b17",
+  true,
+  "b1,b2,b3,b5,b17"
+ ],
+ [
+  "Woche 5: 1 Einheit plus Hotel zählt nicht (keine Reisewoche)",
+  true,
+  ""
+ ],
+ [
+  "Woche 2 zählt (Reisewoche)",
+  true,
+  ""
+ ],
+ [
+  "Wo 2 Einheit 2 am Fr 20.11.",
+  true,
+  ""
+ ],
+ [
+  "Wo 6 Einheit 2 ist Hotel Workout",
+  true,
+  ""
+ ],
+ [
+  "Wo 6 Einheit 3 am So 20.12. (Einheit B)",
+  true,
+  ""
+ ],
+ [
+  "Wo 20 Einheit 3 am Sa 27.3.",
+  true,
+  ""
+ ],
+ [
+  "Wo 1 beginnt Mo 9.11.2026",
+  true,
+  ""
+ ],
+ [
+  "Wo 21 Montag ist Ostermontag 29.3.2027",
+  true,
+  ""
+ ],
+ [
+  "Wo 12 Deload beginnt Mo 25.1.2027",
+  true,
+  ""
+ ],
+ [
+  "Wo 2 beginnt mit Einheit B",
+  true,
+  ""
+ ],
+ [
+  "Deload Wo 12 Brustpresse 2 Sätze",
+  true,
+  ""
+ ],
+ [
+  "Wo 4 Brustpresse 3 Sätze, 3. Einheit 2",
+  true,
+  ""
+ ],
+ [
+  "Bestleistung erkannt",
+  true,
+  ""
+ ],
+ [
+  "Sonntag als 3. Tag",
+  true,
+  ""
+ ],
+ [
+  "Einheit verschieben auf Do",
+  true,
+  ""
+ ],
+ [
+  "Export liefert JSON mit Daten",
+  true,
+  "franz-fitness-2026-10-30.json"
+ ],
+ [
+  "Zurücksetzen mit Bestätigung leert Daten",
+  true,
+  ""
+ ],
+ [
+  "Import stellt Daten wieder her",
+  true,
+  ""
+ ],
+ [
+  "Import bleibt nach Neuladen",
+  true,
+  ""
+ ],
+ [
+  "Mi 16.12. zeigt Hotel Workout",
+  true,
+  ""
+ ],
+ [
+  "Wo 6: 1 Einheit plus Hotel Workout zählt",
+  true,
+  ""
+ ],
+ [
+  "Mo 2.11. zeigt Countdown 7 Tage bis Start 9.11.2026",
+  true,
+  ""
+ ],
+ [
+  "Mo 29.3.2027 ist Woche 21 mit Ostermontag Hinweis",
+  true,
+  ""
+ ],
+ [
+  "Keine Fehler im gesamten Test",
+  true,
+  ""
+ ],
+ [
+  "Laden per file:// ohne Fehler",
+  true,
+  ""
+ ]
+]
