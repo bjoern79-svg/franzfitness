@@ -1,50 +1,44 @@
 "use strict";
-/* Franz Fitness App v1: Daten nur lokal (localStorage), keine externen Requests */
+/* Franz Fitness: Daten nur lokal. Schlüssel bleibt franz-fitness-app-v1, damit alte Einträge erhalten bleiben. */
 const KEY = "franz-fitness-app-v1";
-const START = new Date(2026, 10, 9); // Mo 9.11.2026 (Start um 1 Woche verschoben, vorher 2.11.)
+const CAL = "tag1-2026-11-20";
+const START = new Date(2026, 10, 16); // Montag der Woche 1
+const TAG1 = new Date(2026, 10, 20); // Freitag 20.11.2026, offizieller Start, Einheit A
+const OLD_START = new Date(2026, 10, 9);
 const TOTAL = 21;
+const PLAN_N = 62; // Woche 1 hat 2 Einheiten, Woche 2 bis 21 je 3
 const EXD = {}; EXDATA.forEach(e => EXD[e.id] = e);
 const DAYN = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 const DAYL = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
 const KG_T = [[0, 113], [4, 111], [8, 109], [12, 107], [16, 104.5], [20, 102.5], [21, 102]];
 const BF_T = [[0, 29.2], [4, 27.5], [8, 26], [12, 24.5], [16, 22.5], [20, 20.5], [21, 19.8]];
 const CHECKW = [4, 8, 12, 16, 20, 21];
-const TRAVEL = [2, 4, 6], HOLI = [7, 8, 20, 21];
-// Plan laut Karte 02: s = [Saetze Wo 1 bis 3, ab Wo 4], p = Pause in s, inc = Steigerung
+const TRAVEL = [], HOLI = [6, 7, 19, 20];
+const INC = "die kleinste Stufe mehr (ca. 2,5 bis 5 %)";
+// Karte 15: s = [Sätze Woche 1 bis 3, ab Woche 4], p = Pause in Sekunden
 const UNITS = {
-  A: [{ id: "brustpresse", s: [2, 3], p: 120, inc: "+2,5 kg" }, { id: "schraegbank", s: [2, 2], p: 90, inc: "nächste Hantel (ca. +2 kg)" },
-      { id: "latzug", s: [2, 3], p: 90, inc: "+2,5 kg" }, { id: "beinpresse", s: [2, 2], p: 90, inc: "+5 kg" },
-      { id: "bizeps", s: [2, 2], p: 60, inc: "nächste Hantel (ca. +1 bis 2 kg)" }, { id: "trizeps_seil", s: [2, 2], p: 60, inc: "+2,5 kg" }],
-  B: [{ id: "multipresse", s: [2, 3], p: 120, inc: "+2,5 kg" }, { id: "fliegende", s: [2, 2], p: 75, inc: "+2,5 kg" },
-      { id: "rudern", s: [2, 3], p: 90, inc: "+2,5 kg" }, { id: "goblet", s: [2, 2], p: 90, inc: "nächste Hantel (ca. +2 kg)" },
-      { id: "rdl", s: [2, 2], p: 90, inc: "nächste Hantel (ca. +2 kg)" }, { id: "hammer", s: [2, 2], p: 60, inc: "nächste Hantel (ca. +1 bis 2 kg)" },
-      { id: "trizeps_ueberkopf", s: [2, 2], p: 60, inc: "+2,5 kg" }],
+  A: [{ id: "kh_bank", s: [2, 3], p: 120, inc: INC }, { id: "hs_schraeg", s: [2, 2], p: 90, inc: INC },
+      { id: "latzug", s: [2, 3], p: 90, inc: INC }, { id: "kh_rudern", s: [2, 2], p: 90, inc: INC },
+      { id: "goblet", s: [2, 2], p: 90, inc: INC }, { id: "bizeps", s: [2, 2], p: 60, inc: INC },
+      { id: "trizeps_seil", s: [2, 2], p: 60, inc: INC }],
+  B: [{ id: "schraegbank", s: [2, 3], p: 120, inc: INC }, { id: "fliegende", s: [2, 2], p: 90, inc: INC },
+      { id: "rudern", s: [2, 3], p: 90, inc: INC }, { id: "seitheben", s: [2, 2], p: 60, inc: INC },
+      { id: "rdl", s: [2, 2], p: 90, inc: INC }, { id: "hammer", s: [2, 2], p: 60, inc: INC },
+      { id: "trizeps_strecker", s: [2, 2], p: 60, inc: INC }],
   H: [{ id: "liegestuetz", s: [3, 3], p: 50 }, { id: "bandrudern", s: [3, 3], p: 50 }, { id: "kniebeuge", s: [3, 3], p: 50 }, { id: "plank", s: [3, 3], p: 50, sec: true }]
 };
-const OPTIONAL_A = ["plank", "deadbug"];
-// Ersatztermine laut Karte 09 (d = Tag in der Woche, 0 = Mo)
-const OVR = {
-  "2:0": { n: "Dienstreise Feldkirch ab 13:00: nur trainieren, wenn die Abreise wirklich erst mittags ist, sonst Hotel Workout." },
-  "2:1": { d: 4, n: "Ersatz für Mi 18.11. (Reise, Buß und Bettag)." },
-  "2:2": { d: 6, n: "So 22.11. empfohlen, damit nach Fr ein Ruhetag liegt (Sa 21.11. Kabarett)." },
-  "6:1": { hotel: true, n: "Reise: Mi 16.12. nur Hotel Workout, 20 bis 30 Minuten." },
-  "6:2": { d: 6, n: "Ersatz für Sa 19.12. (Rückreise)." },
-  "7:2": { n: "Feiertage: Sa 26. oder So 27.12., Studio Öffnung bitte vorher prüfen." },
-  "8:2": { n: "Neujahr: Sa 2.1. oder So 3.1., Studio Öffnung bitte prüfen." },
-  "20:2": { d: 5, n: "Sa 27.3. trainieren, So 28.3. ist Ostersonntag." },
-  "21:0": { n: "Ostermontag: Studio Öffnung prüfen. Wenn zu, auf Di 30.3. verschieben und die Mi Einheit auf Fr 2.4. (Mehr, Einheit verschieben)." },
-  "21:2": { n: "Letzte Einheit. Danach Abschluss Check am So 4.4." }
-};
+const OLD_OVR_D = { "2:1": 4, "2:2": 6, "6:2": 6, "20:2": 5 };
 const NOTES = {
-  2: "Dienstreise Feldkirch Mo 16.11. 13:00 bis Mi 18.11. (Buß und Bettag). Mi entfällt, Ersatz Fr 20.11. früh. Sa 21.11. Kabarett, besser So 22.11.",
-  4: "Weihnachtsfeier Rudolstadt Do 3.12. bis Fr 4.12.: Schwimmen Do 7:45 vor der Abreise, Fr kein Training und kein Joggen. Check Woche 4 am So 6.12.",
-  6: "Reise Di 15.12. bis Sa 19.12.: Mi Hotel Workout, Do kein Schwimmen, Sa entfällt, Ersatz So 20.12.",
-  7: "Weihnachten: Öffnungszeiten CrunchFit und Sportbad prüfen (Do 24.12., Fr 25.12., Sa 26.12.).",
-  8: "Silvester und Neujahr: Training Sa 2.1. oder So 3.1., Öffnung prüfen. Check Woche 8 am So 3.1.",
-  12: "Deload Woche: je Übung 1 Satz weniger, Gewicht gleich oder bis 10 % leichter. Check am So 31.1.",
-  16: "Check Woche 16 am So 28.2.",
-  20: "Gründonnerstag 25.3., Karfreitag 26.3., Ostersonntag 28.3.: Training Mo, Mi, Sa 27.3. Check Woche 20 am So 28.3. Ab 28.3. Sommerzeit.",
-  21: "Ostermontag 29.3.: Studio Öffnung prüfen, sonst Di 30.3. und Fr 2.4. (dann kein Joggen). Abschluss Check am So 4.4."
+  1: "Kurze Woche. Tag 1 ist Freitag 20.11. mit Einheit A, Sonntag 22.11. mit Einheit B.",
+  4: "Checkwoche 4 am Sonntag 13.12.: Gewicht, Taille und Körperfett.",
+  6: "Weihnachten: Donnerstag 24.12. bis Samstag 26.12. Studio Öffnung prüfen, falls der dritte Tag auf Samstag fällt.",
+  7: "Neujahr: Samstag 2.1. oder Sonntag 3.1., Studio Öffnung prüfen.",
+  8: "Checkwoche 8 am Sonntag 10.1.: Gewicht, Taille und Körperfett.",
+  12: "Deload vom 1.2. bis 7.2.2027: nur 2 Sätze, etwas leichter, RIR 3. Check am Sonntag 7.2.",
+  16: "Checkwoche 16 am Sonntag 7.3.: Gewicht, Taille und Körperfett.",
+  19: "Ostersonntag ist der 28.3. Wenn der dritte Tag auf Sonntag liegt, Studio Öffnung prüfen.",
+  20: "Ostermontag 29.3. ist der Montag dieser Woche. Studio Öffnung prüfen. Check am Sonntag 4.4.",
+  21: "Letzte Woche. Abschluss Check am Sonntag 11.4.2027."
 };
 const SPRUECHE = ["Der Start zählt. Brust raus, Plan steht.", "Erst Technik, dann Tonnen.", "Kleine Schritte, große Kurve.",
   "Woche 4: Der erste Check wartet, dein Körper merkt schon mehr als die Waage.", "Konstanz schlägt Motivation.",
@@ -71,22 +65,91 @@ function fmtL(d) { return DAYN[(d.getDay() + 6) % 7] + " " + fmt(d); }
 function same(a, b) { return a.getTime() === b.getTime(); }
 function phase(w) { return w <= 3 ? "Einstieg" : w <= 9 ? "Aufbau" : w <= 11 ? "Steigerung" : w === 12 ? "Deload und Check" : w <= 20 ? "Progression" : "Abschluss"; }
 function stepsGoal(w) { return w <= 4 ? 8000 : w <= 12 ? 9000 : 10000; }
-function unitOf(w, s) { return (((w - 1) * 3 + s) % 2 === 0) ? "A" : "B"; }
-function sess(w, s) {
-  const k = w + ":" + s, o = OVR[k] || {}, sh = S.set.shift[k];
-  let d = s === 0 ? 0 : s === 1 ? 2 : (S.set.we === "so" ? 6 : 5);
-  if (o.d !== undefined) d = o.d;
-  if (sh !== undefined) d = sh;
-  const hotel = !!o.hotel && !S.set.noHotel?.[k];
-  return { k, w, s, d, date: wDate(w, d), unit: hotel ? "H" : unitOf(w, s), plan: unitOf(w, s), note: o.n || "", shifted: sh !== undefined };
+function planSlots(w) {
+  if (w === 1) return [{ s: 0, d: 4 }, { s: 1, d: 6 }];
+  const third = S.set.we === "so" ? 6 : 5;
+  return [{ s: 0, d: 0 }, { s: 1, d: 2 }, { s: 2, d: third }];
 }
-function weekSess(w) { return [0, 1, 2].map(s => sess(w, s)); }
-function rir(w) { return w <= 3 ? "3" : w === 12 ? "4" : "2 bis 3"; }
+function unitAt(w, s) { const n = w === 1 ? s : 2 + (w - 2) * 3 + s; return n % 2 === 0 ? "A" : "B"; }
+function sess(w, s) {
+  const slot = planSlots(w).find(x => x.s === s);
+  if (!slot) return null;
+  const k = w + ":" + s, sh = S.set.shift[k];
+  let d = sh !== undefined ? sh : slot.d;
+  const u = unitAt(w, s);
+  return { k, w, s, d, date: wDate(w, d), unit: u, plan: u, note: "", shifted: sh !== undefined };
+}
+function weekSess(w) { return planSlots(w).map(sl => sess(w, sl.s)); }
+function rir(w) { return w === 12 ? "3" : w <= 3 ? "2 bis 3" : "1 bis 2"; }
 function setsFor(w, s, idx, u) {
-  const def = UNITS[u][idx]; let n = w <= 3 ? def.s[0] : def.s[1];
-  if (u !== "H" && w >= 4 && s === 2 && idx === 0) n = 2; // Karte 02: in der dritten Einheit bleibt die erste Brustübung bei 2 Saetzen
-  if (w === 12 && u !== "H") n = Math.max(1, n - 1);
-  return n;
+  const def = UNITS[u][idx];
+  if (!def) return 2;
+  if (u === "H") return def.s[0];
+  if (w === 12) return 2;
+  return w <= 3 ? def.s[0] : def.s[1];
+}
+function oldSessDate(w, s, we) {
+  let d = s === 0 ? 0 : s === 1 ? 2 : (we === "so" ? 6 : 5);
+  if (OLD_OVR_D[w + ":" + s] !== undefined) d = OLD_OVR_D[w + ":" + s];
+  return addD(OLD_START, 7 * (w - 1) + d);
+}
+function migrate() {
+  if (S.cal === CAL) return;
+  const we = (S.set && S.set.we) || "sa";
+  if (S.set && S.set.shift && Object.keys(S.set.shift).length) {
+    S.archive = S.archive || {};
+    S.archive.shift = S.set.shift;
+    S.set.shift = {};
+  }
+  const archive = S.archive || {};
+  archive.sessions = archive.sessions || [];
+  archive.act = archive.act || {};
+  archive.meas = archive.meas || {};
+  const keys = new Set([...Object.keys(S.logs || {}), ...Object.keys(S.done || {})]);
+  const newLogs = {}, newDone = {};
+  keys.forEach(k => {
+    const parts = k.split(":").map(Number);
+    const pack = { k, logs: S.logs[k] || null, done: S.done[k] || null };
+    if (parts.length !== 2 || parts.some(n => Number.isNaN(n))) { archive.sessions.push(pack); return; }
+    const date = oldSessDate(parts[0], parts[1], we);
+    pack.t = date.getTime();
+    if (date < TAG1) { archive.sessions.push(pack); return; }
+    let dest = null;
+    for (let nw = 1; nw <= TOTAL && !dest; nw++) {
+      for (const slot of planSlots(nw)) {
+        if (wDate(nw, slot.d).getTime() === date.getTime()) dest = nw + ":" + slot.s;
+      }
+    }
+    if (!dest) { archive.sessions.push(pack); return; }
+    if (pack.logs) newLogs[dest] = pack.logs;
+    if (pack.done) newDone[dest] = pack.done;
+  });
+  S.logs = newLogs;
+  S.done = newDone;
+  const newAct = {};
+  Object.keys(S.act || {}).forEach(k => {
+    const m = /^(\d+):(.*)$/.exec(k);
+    if (!m || +m[1] <= 1) { archive.act[k] = S.act[k]; return; }
+    const nw = +m[1] - 1;
+    if (nw >= 1 && nw <= TOTAL) newAct[nw + ":" + m[2]] = S.act[k];
+    else archive.act[k] = S.act[k];
+  });
+  S.act = newAct;
+  const newMeas = {};
+  Object.keys(S.meas || {}).forEach(k => {
+    const m = /^(\d+):(.*)$/.exec(k);
+    if (!m) { archive.meas[k] = S.meas[k]; return; }
+    const w = +m[1];
+    if (w === 0) newMeas[k] = S.meas[k];
+    else if (w === 1) archive.meas[k] = S.meas[k];
+    else if (w - 1 <= TOTAL) newMeas[(w - 1) + ":" + m[2]] = S.meas[k];
+    else archive.meas[k] = S.meas[k];
+  });
+  S.meas = newMeas;
+  if (Array.isArray(S.okSeen)) S.okSeen = S.okSeen.map(w => w - 1).filter(w => w >= 1 && w <= TOTAL);
+  S.archive = archive;
+  S.cal = CAL;
+  save();
 }
 function repRange(id) { const m = (EXD[id].wdh || "").match(/(\d+)\s*bis\s*(\d+)/); return m ? [+m[1], +m[2]] : [8, 12]; }
 
@@ -102,9 +165,9 @@ function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); storageOK 
 /* ---------- Auswertung ---------- */
 const act = (w, k) => S.act[w + ":" + k] === true;
 const isDone = (w, s) => !!S.done[w + ":" + s];
-function kraftCount(w) { const t = [0, 1, 2].filter(s => isDone(w, s) && sess(w, s).unit !== "H").length; return TRAVEL.includes(w) && act(w, "hw") && t < 3 ? t + 1 : t; }
+function kraftCount(w) { return planSlots(w).filter(sl => isDone(w, sl.s)).length; }
 const okWeek = w => kraftCount(w) >= 2;
-function sessionsFlat() { const o = []; for (let w = 1; w <= TOTAL; w++) { let b = TRAVEL.includes(w) && act(w, "hw"); for (let s = 0; s < 3; s++) { let v = isDone(w, s) && sess(w, s).unit !== "H"; if (!v && b) { v = true; b = false; } o.push(v); } } return o; }
+function sessionsFlat() { const o = []; for (let w = 1; w <= TOTAL; w++) planSlots(w).forEach(sl => o.push(!!isDone(w, sl.s))); return o; }
 function curWeek() { return Math.min(TOTAL, Math.max(1, weekOf(today()))); }
 function stats() {
   let last = 0; for (let w = 1; w <= TOTAL; w++) if (kraftCount(w) > 0) last = w;
@@ -119,7 +182,7 @@ function stats() {
 function e1rm(kg, r) { return kg * (1 + r / 30); }
 function allLogs() { // chronologisch: [{k,w,s,date,id,sets}]
   const out = [];
-  Object.keys(S.logs).forEach(k => { const [w, s] = k.split(":").map(Number); const se = sess(w, s);
+  Object.keys(S.logs).forEach(k => { const [w, s] = k.split(":").map(Number); const se = sess(w, s); if (!se) return;
     Object.keys(S.logs[k]).forEach(id => { const sets = (S.logs[k][id] || []).filter(x => x && x.done); if (sets.length) out.push({ k, w, s, date: se.date, id, sets }); }); });
   return out.sort((a, b) => a.date - b.date || a.w - b.w || a.s - b.s);
 }
@@ -139,7 +202,7 @@ function xpInfo() {
   add("set", countSets());
   let ses = 0, hot = 0, sw = 0, jo = 0, st = 0, pr = 0, kg = 0, bf = 0, wk = 0;
   for (let w = 1; w <= TOTAL; w++) {
-    for (let s = 0; s < 3; s++) if (isDone(w, s) && sess(w, s).unit !== "H") ses++;
+    planSlots(w).forEach(sl => { if (isDone(w, sl.s)) ses++; });
     if (act(w, "hw")) hot++; if (act(w, "sw")) sw++; if (act(w, "jo")) jo++;
     for (let d = 0; d < 7; d++) { if (act(w, "st" + d)) st++; if (act(w, "pr" + d)) pr++; }
     if (num(S.meas[w + ":kg"]) > 0) kg++; if (num(S.meas[w + ":bf"]) > 0) bf++;
@@ -155,16 +218,16 @@ function badges() {
   const st = stats(), R = records(), X = xpInfo();
   let hotel = false, swim = 0, jog = 0, fs = false, fp = false, fw = false, wts = 0;
   for (let w = 1; w <= TOTAL; w++) {
-    if (act(w, "sw")) swim++; if (act(w, "jo")) jog++; if (TRAVEL.includes(w) && act(w, "hw")) hotel = true;
+    if (act(w, "sw")) swim++; if (act(w, "jo")) jog++; if (act(w, "hw")) hotel = true;
     if ([0, 1, 2, 3, 4, 5, 6].every(d => act(w, "st" + d))) fs = true;
     if ([0, 1, 2, 3, 4, 5, 6].every(d => act(w, "pr" + d))) fp = true;
-    if (kraftCount(w) === 3) fw = true; if (num(S.meas[w + ":kg"]) > 0) wts++;
+    if (kraftCount(w) === planSlots(w).length) fw = true; if (num(S.meas[w + ":kg"]) > 0) wts++;
   }
   return [
     ["b1", "🏁", "Erste Einheit", "Die erste Krafteinheit ist abgehakt.", st.total >= 1],
     ["b18", "✍️", "Erster Satz", "Den ersten Satz im Logger eingetragen.", R.firstSet],
-    ["b2", "📅", "Erste Woche", "Woche 1 mit mindestens 2 von 3 Einheiten.", okWeek(1)],
-    ["b3", "💯", "Volle Woche", "Eine Woche mit allen 3 Krafteinheiten.", fw],
+    ["b2", "📅", "Erste Woche", "Woche 1 mit beiden Einheiten, Freitag und Sonntag.", okWeek(1)],
+    ["b3", "💯", "Volle Woche", "Eine Woche mit allen geplanten Krafteinheiten.", fw],
     ["b4", "🔟", "10 Einheiten", "10 Krafteinheiten geschafft.", st.total >= 10],
     ["b5", "🔥", "4 Wochen Streak", "4 Wochen in Folge mit mindestens 2 von 3.", st.bestWeek >= 4],
     ["b6", "⛳", "Halbzeit", "Woche 11 mit mindestens 2 von 3 geschafft.", okWeek(11)],
@@ -176,10 +239,10 @@ function badges() {
     ["b12", "👟", "Schrittmacher", "Eine Woche Schrittziel an allen 7 Tagen.", fs],
     ["b13", "🥚", "Eiweiß Profi", "Eine Woche Eiweißziel an allen 7 Tagen.", fp],
     ["b14", "⚖️", "Messpunkt", "In 4 Wochen das Gewicht eingetragen.", wts >= 4],
-    ["b17", "🧳", "Hotel Held", "Ein Hotel Workout in einer Reisewoche.", hotel],
+    ["b17", "🧳", "Hotel Held", "Ein Hotel Workout eingetragen.", hotel],
     ["b19", "🏆", "Neue Bestleistung", "Erste persönliche Bestleistung geknackt.", R.prs.length >= 1],
     ["b20", "💪", "5 Bestleistungen", "Fünf persönliche Rekorde.", R.prs.length >= 5],
-    ["b15", "🥇", "50 Einheiten", "50 von 63 Krafteinheiten.", st.total >= 50],
+    ["b15", "🥇", "50 Einheiten", "50 von " + PLAN_N + " Krafteinheiten.", st.total >= 50],
     ["b16", "🎯", "Zielgerade", "Woche 21 mit mindestens 2 von 3.", okWeek(21)],
     ["b21", "⭐", "Level 5", "Level 5 erreicht: " + LEVELS[4][1] + ".", X.lvl >= 5]
   ].map(a => ({ id: a[0], i: a[1], t: a[2], d: a[3], on: !!a[4] }));
@@ -191,7 +254,7 @@ function interp(pts, w) { for (let i = 1; i < pts.length; i++) { const a = pts[i
 /* ---------- UI Helfer ---------- */
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-let tab = "heute", openK = null, viewWeek = null, strengthEx = "brustpresse", progWeek = null;
+let tab = "heute", openK = null, viewWeek = null, strengthEx = "kh_bank", progWeek = null;
 function toast(t) { const el = $("#toast"); el.textContent = t; el.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove("on"), 2600); }
 function lastSets(id, beforeK) { // letzte Einheit mit dieser Uebung vor beforeK
   const se = beforeK ? sess(...beforeK.split(":").map(Number)) : null;
@@ -248,16 +311,20 @@ function unitName(u) { return u === "H" ? "Hotel Workout" : "Einheit " + u; }
 function vHeute() {
   const t = today(), w0 = weekOf(t);
   let h = "";
-  if (w0 < 1) h += `<div class="card hero"><div class="sm mu">Countdown</div><div class="big">Noch ${Math.round((START - t) / 864e5)} Tage bis zum Start</div><div class="sm" style="margin-top:6px">Woche 1 beginnt am Mo 9.11.2026 mit Einheit A. Du kannst dir die Übungen schon anschauen.</div></div>`;
+  if (t < TAG1) {
+    const days = Math.max(0, Math.round((TAG1 - t) / 864e5));
+    h += `<div class="card hero"><div class="chip g">Tag 1 / Start 20.11.2026</div><div class="big" style="margin-top:8px">Noch ${days} ${days === 1 ? "Tag" : "Tage"} bis zum Start</div><div class="sm" style="margin-top:6px">Freitag 20.11.2026, Einheit A. Kurze Woche 1: Freitag Einheit A, Sonntag 22.11. Einheit B. Ab Woche 2 montags, mittwochs und am Wochenende, A und B im Wechsel.</div></div>`;
+  }
   if (w0 > TOTAL) h += `<div class="card hero"><div class="big">Plan geschafft! 🎉</div><div class="sm">21 Wochen sind vorbei. Schau in Fortschritt und Erfolge, was du erreicht hast.</div></div>`;
   const w = Math.min(TOTAL, Math.max(1, w0));
-  const ws = weekSess(w); let cur = ws.find(x => same(x.date, t));
-  let next = null; if (!cur) { for (let ww = w; ww <= Math.min(TOTAL, w + 1) && !next; ww++) next = weekSess(ww).find(x => x.date >= t && !isDone(x.w, x.s)); }
-  const sel = openK ? sess(...openK.split(":").map(Number)) : (cur || next || ws[0]);
-  if (w0 >= 1 && w0 <= TOTAL) {
-    h += `<div class="card hero"><div class="row sp"><div><div class="sm mu">${fmtL(t)} · Woche ${w} von 21 · ${phase(w)}</div>
+  const ws = weekSess(w); let cur = t >= TAG1 ? ws.find(x => same(x.date, t)) : null;
+  let next = null; if (!cur) { for (let ww = (t < TAG1 ? 1 : w); ww <= Math.min(TOTAL, (t < TAG1 ? 1 : w) + 1) && !next; ww++) next = weekSess(ww).find(x => x.date >= t && !isDone(x.w, x.s)); }
+  let sel = openK ? sess(...openK.split(":").map(Number)) : null;
+  if (!sel) sel = cur || next || ws[0];
+  if (t >= TAG1 && w0 >= 1 && w0 <= TOTAL) {
+    h += `<div class="card hero">${same(t, TAG1) ? '<div class="chip g" style="margin-bottom:8px">Tag 1 / Start 20.11.2026</div>' : ""}<div class="row sp"><div><div class="sm mu">${fmtL(t)} · Woche ${w} von 21 · ${phase(w)}</div>
     <div class="big">${cur ? "Heute: " + unitName(cur.unit) : "Heute trainingsfrei"}</div>
-    <div class="sm" style="margin-top:4px">${cur ? (isDone(cur.w, cur.s) ? "Erledigt ✅ Stark!" : "Früh vor der Arbeit, ca. 60 bis 70 Minuten.") : next ? "Nächste Einheit: " + fmtL(next.date) + ", " + unitName(next.unit) : "Diese Woche ist durch."}</div></div>
+    <div class="sm" style="margin-top:4px">${cur ? (isDone(cur.w, cur.s) ? "Erledigt ✅ Stark!" : "Früh vor der Arbeit, ca. 60 Minuten.") : next ? "Nächste Einheit: " + fmtL(next.date) + ", " + unitName(next.unit) : "Diese Woche ist durch."}</div></div>
     ${unitBadge(cur ? cur.unit : next ? next.unit : "A")}</div>
     ${NOTES[w] ? `<div class="note">${esc(NOTES[w])}</div>` : ""}<div class="quote">„${esc(SPRUECHE[w - 1])}“</div></div>`;
   }
@@ -275,15 +342,16 @@ function vSession(se) {
   let h = `<div class="card" id="sess"><div class="row sp"><div class="row">${unitBadge(u)}<div><h2 style="margin:0">${unitName(u)}</h2><div class="sm mu">${DAYL[se.d]} ${fmt(se.date)} · RIR ${u === "H" ? "1 bis 2" : rir(se.w)}${se.w === 12 && u !== "H" ? " · Deload" : ""}</div></div></div>
   ${isDone(se.w, se.s) ? '<span class="chip g">erledigt</span>' : ""}</div>`;
   if (se.note) h += `<div class="note">${esc(se.note)}</div>`;
-  if (u === "H") h += `<div class="sm mu" style="margin-top:6px">3 Runden, 45 bis 60 Sekunden Pause. Zählt in Reisewochen zusammen mit 1 Studio Einheit für den Streak.</div>`;
-  if (se.w === 12 && u !== "H") h += `<div class="note">Deload: je Übung 1 Satz weniger, Gewicht gleich oder bis 10 % leichter.</div>`;
+  if (u === "H") h += `<div class="sm mu" style="margin-top:6px">3 Runden, 45 bis 60 Sekunden Pause. Freiwillig, ersetzt keine Programmeinheit.</div>`;
+  if (se.w === 12 && u !== "H") h += `<div class="note">Deload: nur 2 Sätze, etwas leichter, RIR 3.</div>`;
   list.forEach((def, i) => {
     const e = EXD[def.id], n = setsFor(se.w, se.s, i, u), cur = lg[def.id] || [], last = lastSets(def.id, se.k);
     const lastTxt = last ? "Letztes Mal (" + fmt(last.date) + "): " + last.sets.map(x => (x.kg ? f1(x.kg, x.kg % 1 ? 1 : 0) + " kg × " : "") + x.r).join(", ") : "Noch kein Eintrag, starte leicht und sauber.";
     const lastTop = last ? Math.max(0, ...last.sets.map(x => x.kg || 0)) : 0, raised = cur.some(x => x && x.done && x.kg > lastTop);
     const hint = u === "H" || raised ? null : progressHint(def.id, last && last.sets, n), hintNow = u === "H" ? null : progressHint(def.id, cur.filter(x => x && x.done), n);
     h += `<div class="ex"><div class="exh" data-guide="${def.id}"><img class="thumb" src="${IMG[def.id]}" alt=""><div><div class="exn">${i + 1}. ${esc(e.name)}</div>
-      <div class="row wrapc" style="gap:4px;margin-top:4px"><span class="chip">${n} × ${esc(def.sec ? e.wdh : e.wdh)}</span><span class="chip">Pause ${esc(e.pause)}</span><span class="chip b">Anleitung ›</span></div></div></div>
+      <div class="row wrapc" style="gap:4px;margin-top:4px"><span class="chip">${n} × ${esc(e.wdh)}</span><span class="chip">Pause ${esc(e.pause)}</span><span class="chip b">Anleitung ›</span></div>
+      ${e.ersatz ? `<div class="xs mu" style="margin-top:4px">Ersatz: ${esc(e.ersatz)}</div>` : ""}</div></div>
       <div class="last">${esc(lastTxt)}</div>${hint ? `<div class="hint g">⬆️ ${esc(hint.t)}</div>` : ""}<div class="sets">`;
     const rows = Math.max(n, cur.length);
     for (let j = 0; j < rows; j++) {
@@ -295,26 +363,25 @@ function vSession(se) {
     }
     h += `</div><div class="row sp" style="margin-top:6px"><button class="sm mu" data-add="${se.k}|${def.id}">+ Satz</button><span class="xs mu">${e.rir && u !== "H" ? "" : ""}</span></div>${hintNow && !hint ? `<div class="hint g">🎯 ${esc(hintNow.t)}</div>` : ""}</div>`;
   });
-  if (u === "A") h += `<div class="sm mu" style="margin-top:6px">Optional zum Schluss: <button class="chip b" data-guide="plank">Plank</button> oder <button class="chip b" data-guide="deadbug">Dead Bug</button>, 2 Sätze à 20 bis 40 Sekunden.</div>`;
+  if (u === "A") h += `<div class="sm mu" style="margin-top:6px">Optional zum Schluss: Bauchmaschine, 2 Sätze à 12 bis 15 Wiederholungen, oder <button class="chip b" data-guide="plank">Plank</button>, 2 Sätze à 20 bis 40 Sekunden.</div>`;
   h += `<button class="btn full" style="margin-top:12px" data-finish="${se.k}">${isDone(se.w, se.s) ? "Erledigt ✅ (nochmal tippen zum Zurücknehmen)" : u === "H" ? "Hotel Workout abschließen (+" + XP.hotel + " XP)" : "Einheit abschließen (+" + XP.session + " XP)"}</button></div>`;
   return h;
 }
 function tickRow(key, label, sub, on) { return `<div class="tick" data-act="${key}"><span class="box ${on ? "on" : ""}">${on ? "✓" : ""}</span><div><div style="font-weight:600">${label}</div><div class="xs mu">${sub}</div></div></div>`; }
 function vActs(w, t) {
   const d = Math.min(6, Math.max(0, Math.round((t - wDate(w, 0)) / 864e5)));
-  const travel = TRAVEL.includes(w);
   return `<div class="card"><h2>Heute und diese Woche</h2>
   ${tickRow(w + ":st" + d, "Schritte heute: " + stepsGoal(w).toLocaleString("de-DE"), DAYN[d] + " · +" + XP.steps + " XP", act(w, "st" + d))}
   ${tickRow(w + ":pr" + d, "Eiweiß heute: 160 bis 190 g", "3 bis 4 eiweißreiche Mahlzeiten · +" + XP.prot + " XP", act(w, "pr" + d))}
   ${tickRow(w + ":sw", "Schwimmen (meist Do 7:45)", "Locker, Zone 2 · +" + XP.swim + " XP", act(w, "sw"))}
   ${tickRow(w + ":jo", "Joggen locker", "Gehen und Joggen im Wechsel, nie am Tag nach Beinen · +" + XP.jog + " XP", act(w, "jo"))}
-  ${tickRow(w + ":hw", "Hotel Workout" + (travel ? " (Reisewoche)" : ""), (travel ? "Zählt mit 1 Studio Einheit für den Streak" : "Zählt nur in Reisewochen (2, 4, 6) für den Streak") + " · +" + XP.hotel + " XP", act(w, "hw"))}
+  ${tickRow(w + ":hw", "Hotel Workout", "Freiwillig. Ersetzt keine Programmeinheit. +" + XP.hotel + " XP", act(w, "hw"))}
   </div>`;
 }
 function vWoche() {
   const cw = weekOf(today()), st = stats();
-  let h = `<div class="card"><h2>🔥 Streak</h2><div class="kpi"><div><b>${st.weekStreak}</b><span>Wochen in Folge</span></div><div><b>${st.sessStreak}</b><span>Einheiten in Folge</span></div><div><b>${st.total}/63</b><span>Krafteinheiten</span></div></div>
-   <div class="xs mu" style="margin-top:8px">Eine Woche zählt mit mindestens 2 von 3 Krafteinheiten. Reisewochen (2, 4, 6): 1 Einheit plus Hotel Workout reicht.</div>
+  let h = `<div class="card"><h2>🔥 Streak</h2><div class="kpi"><div><b>${st.weekStreak}</b><span>Wochen in Folge</span></div><div><b>${st.sessStreak}</b><span>Einheiten in Folge</span></div><div><b>${st.total}/${PLAN_N}</b><span>Krafteinheiten</span></div></div>
+   <div class="xs mu" style="margin-top:8px">Eine Woche zählt mit mindestens 2 Krafteinheiten. Woche 1 hat nur Freitag und Sonntag, beide müssen erledigt sein. Ab Woche 2 mindestens 2 von 3.</div>
    <div class="prog" style="margin-top:10px"><i style="width:${Math.round(100 * Math.min(21, Math.max(0, cw)) / 21)}%"></i></div><div class="xs mu" style="margin-top:4px">Woche ${Math.max(0, Math.min(21, cw))} von 21</div></div>`;
   h += `<div class="card"><h2>Wochenübersicht 1 bis 21</h2>`;
   for (let w = 1; w <= TOTAL; w++) {
@@ -330,7 +397,7 @@ function vWoche() {
 function vWeekDetail(w) {
   let h = `<div class="card" style="background:var(--p2);margin:6px 0 10px"><div class="sm mu">Tippen zum Abhaken (ohne Satzdaten möglich)</div>`;
   weekSess(w).forEach(x => { h += tickRow("done:" + x.k, fmtL(x.date) + " · " + unitName(x.unit), x.note || (x.shifted ? "verschoben" : "laut Plan"), isDone(x.w, x.s)); });
-  h += tickRow(w + ":sw", "Schwimmen", "Do", act(w, "sw")) + tickRow(w + ":jo", "Joggen", "locker", act(w, "jo")) + tickRow(w + ":hw", "Hotel Workout", TRAVEL.includes(w) ? "Reisewoche" : "zählt nur in Reisewochen", act(w, "hw"));
+  h += tickRow(w + ":sw", "Schwimmen", "Do", act(w, "sw")) + tickRow(w + ":jo", "Joggen", "locker", act(w, "jo")) + tickRow(w + ":hw", "Hotel Workout", "freiwillig, ersetzt keine Programmeinheit", act(w, "hw"));
   h += `<div class="sm" style="margin-top:8px">Schritte ${stepsGoal(w).toLocaleString("de-DE")} pro Tag</div><div class="days">` + DAYN.map((d, i) => `<button class="${act(w, "st" + i) ? "on" : ""}" data-act="${w}:st${i}">${d}</button>`).join("") + `</div>
    <div class="sm" style="margin-top:8px">Eiweiß 160 bis 190 g</div><div class="days">` + DAYN.map((d, i) => `<button class="${act(w, "pr" + i) ? "on" : ""}" data-act="${w}:pr${i}">${d}</button>`).join("") + `</div>
    <button class="btn sec full" style="margin-top:10px" data-gow="${w}">Einheiten dieser Woche öffnen</button></div>`;
@@ -354,11 +421,11 @@ function vFort() {
   const kgP = [[0, 113]], bfP = [[0, 29.2]], waP = [];
   for (let i = 0; i <= TOTAL; i++) { const a = num(S.meas[i + ":kg"]), b = num(S.meas[i + ":bf"]), c = num(S.meas[i + ":wa"]); if (a > 0 && i > 0) kgP.push([i, a]); if (b > 0 && i > 0) bfP.push([i, b]); if (c > 0) waP.push([i, c]); }
   const tg = interp(KG_T, w), tb = interp(BF_T, w);
-  let h = `<div class="card"><h2>📏 Messwerte eintragen</h2><div class="row sp"><button class="btn sec" data-pw="${Math.max(0, w - 1)}">◀</button><div style="text-align:center"><b>${w === 0 ? "Startwerte (Woche 0)" : "Woche " + w}</b><div class="xs mu">${w ? fmt(wDate(w, 0)) + " bis " + fmt(wDate(w, 6)) : "vor dem 9.11."}${CHECKW.includes(w) ? " · Check Woche" : ""}</div></div><button class="btn sec" data-pw="${Math.min(TOTAL, w + 1)}">▶</button></div>
+  let h = `<div class="card"><h2>📏 Messwerte eintragen</h2><div class="row sp"><button class="btn sec" data-pw="${Math.max(0, w - 1)}">◀</button><div style="text-align:center"><b>${w === 0 ? "Startwerte (Woche 0)" : "Woche " + w}</b><div class="xs mu">${w ? fmt(wDate(w, 0)) + " bis " + fmt(wDate(w, 6)) : "vor dem 20.11."}${CHECKW.includes(w) ? " · Checkwoche" : ""}</div></div><button class="btn sec" data-pw="${Math.min(TOTAL, w + 1)}">▶</button></div>
   <div class="grid3" style="margin-top:10px"><div><label class="f">Gewicht kg</label><input inputmode="decimal" data-meas="${w}:kg" value="${esc(S.meas[w + ":kg"] || "")}" placeholder="${w ? "Ziel " + f1(tg) : "113"}"></div>
   <div><label class="f">Taille cm</label><input inputmode="decimal" data-meas="${w}:wa" value="${esc(S.meas[w + ":wa"] || "")}" placeholder="${w ? "Nabelhöhe" : "Startwert"}"></div>
   <div><label class="f">Körperfett %${CHECKW.includes(w) ? " ⭐" : ""}</label><input inputmode="decimal" data-meas="${w}:bf" value="${esc(S.meas[w + ":bf"] || "")}" placeholder="${w ? "Ziel " + f1(tb) : "29,2"}"></div></div>
-  <div class="xs mu" style="margin-top:6px">Gewicht morgens nüchtern, wöchentlich. Körperfett alle 4 Wochen (Wo 4, 8, 12, 16, 20, 21), Withings, nur der Trend zählt. Kreatin kann 1 bis 2 kg Wasser bringen.</div></div>`;
+  <div class="xs mu" style="margin-top:6px">Gewicht morgens nüchtern, wöchentlich. Körperfett alle 4 Wochen (Woche 4, 8, 12, 16, 20 und 21), Withings, nur der Trend zählt. Kreatin kann 1 bis 2 kg Wasser bringen.</div></div>`;
   h += `<div class="card"><h2>⚖️ Gewicht gegen Zielkorridor</h2>${chart(kgP, KG_T, 98, 116, 1, "kg", "#3ddc97")}<div class="xs mu">Grün: Ziel ±1 kg (113 → 111 / 109 / 107 / 104,5 / 102,5 → ca. 102 kg).</div></div>`;
   h += `<div class="card"><h2>📉 Körperfett gegen Zielkorridor</h2>${chart(bfP, BF_T, 16, 32, 1, "%", "#ff9f43")}<div class="xs mu">Orange: Ziel ±1 Prozentpunkt (29,2 → 27,5 / 26 / 24,5 / 22,5 / 20,5 → unter 20 %).</div></div>`;
   if (waP.length) { const lo = Math.floor(Math.min(...waP.map(p => p[1])) - 3), hi = Math.ceil(Math.max(...waP.map(p => p[1])) + 3); h += `<div class="card"><h2>📐 Taille</h2>${chart(waP, null, lo, hi, 0, "cm", "#4da3ff")}<div class="xs mu">Kein fester Zielwert, der Trend nach unten zählt.</div></div>`; }
@@ -394,17 +461,37 @@ function vMehr() {
   const shifts = Object.keys(S.set.shift);
   return `<div class="card"><h2>⚙️ Einstellungen</h2><label class="f">Dritte Einheit am Wochenende</label>
   <div class="seg"><button class="${S.set.we === "sa" ? "on" : ""}" data-we="sa">Samstag</button><button class="${S.set.we === "so" ? "on" : ""}" data-we="so">Sonntag</button></div>
-  <div class="xs mu" style="margin-top:6px">Ersatztermine aus Karte 09 (z.B. Fr 20.11., So 20.12., Sa 27.3.) gelten unabhängig davon.</div></div>
+  <div class="xs mu" style="margin-top:6px">Ab Woche 2 liegt die dritte Einheit auf Samstag oder Sonntag. Woche 1 bleibt Freitag 20.11. und Sonntag 22.11.</div></div>
   <div class="card"><h2>↔️ Einheit verschieben</h2><div class="grid3"><div><label class="f">Woche</label><select id="shw">${Array.from({ length: 21 }, (_, i) => `<option ${i + 1 === curWeek() ? "selected" : ""}>${i + 1}</option>`).join("")}</select></div>
-  <div><label class="f">Einheit</label><select id="shs"><option value="0">1. (Mo)</option><option value="1">2. (Mi)</option><option value="2">3. (Wochenende)</option></select></div>
+  <div><label class="f">Einheit</label><select id="shs"><option value="0">1.</option><option value="1">2.</option><option value="2">3. (ab Woche 2)</option></select></div>
   <div><label class="f">Neuer Tag</label><select id="shd">${DAYN.map((d, i) => `<option value="${i}">${d}</option>`).join("")}</select></div></div>
   <button class="btn full" style="margin-top:10px" data-shift>Verschieben</button>
   <div class="xs mu" style="margin-top:6px">Regeln: maximal 1 Nachholtermin pro Woche, nie zwei Tage hintereinander dieselben Muskeln, nie am Tag nach Beinen joggen.</div>
-  ${shifts.length ? `<div style="margin-top:8px">${shifts.map(k => { const [w, s] = k.split(":").map(Number); const x = sess(w, s); return `<div class="row sp sm" style="padding:4px 0"><span>Woche ${w}, Einheit ${s + 1} → ${fmtL(x.date)}</span><button class="chip r" data-unshift="${k}">zurücksetzen</button></div>`; }).join("")}</div>` : ""}</div>
+  ${shifts.length ? `<div style="margin-top:8px">${shifts.map(k => { const [w, s] = k.split(":").map(Number); const x = sess(w, s); if (!x) return ""; return `<div class="row sp sm" style="padding:4px 0"><span>Woche ${w}, Einheit ${s + 1} → ${fmtL(x.date)}</span><button class="chip r" data-unshift="${k}">zurücksetzen</button></div>`; }).join("")}</div>` : ""}</div>
   <div class="card"><h2>💾 Daten</h2><div class="sm mu">Alles bleibt auf diesem Gerät (localStorage). Exportiere regelmäßig als Sicherung, z.B. nach jedem Check.</div>
   <div class="grid2" style="margin-top:10px"><button class="btn sec" data-export>Exportieren</button><label class="btn sec">Importieren<input type="file" accept="application/json,.json" data-import style="display:none"></label></div>
   <button class="btn warn full" style="margin-top:8px" data-reset>Alle Daten zurücksetzen</button></div>
-  <div class="card"><h2>ℹ️ Über die App</h2><div class="sm">Franz Fitness v2 · Plan Woche 1 bis 21 (Mo 9.11.2026 bis So 4.4.2027). Offline, ohne Konto, ohne Tracker. Übungsbilder sind Illustrationen, keine Einweisung. Alle Zahlen sind Richtwerte, bei Beschwerden Arzt fragen.</div></div>`;
+  <div class="card"><h2>ℹ️ Über die App</h2><div class="sm">Franz Fitness v3 · Plan Woche 1 bis 21. Tag 1 ist Freitag 20.11.2026 mit Einheit A, Ende Sonntag 11.4.2027. Deload in Woche 12 vom 1.2. bis 7.2.2027. Körperfett in den Wochen 4, 8, 12, 16, 20 und 21. Offline, ohne Konto, ohne Tracker. Übungsbilder sind Illustrationen, keine Einweisung. Alle Zahlen sind Richtwerte, bei Beschwerden Arzt fragen.</div></div>` + historyCard();
+}
+function historyCard() {
+  const a = S.archive;
+  if (!a) return "";
+  const sessA = a.sessions || [], meas = a.meas || {}, mk = Object.keys(meas);
+  if (!sessA.length && !mk.length) return "";
+  let h = `<div class="card"><h2>Frühere Einträge</h2><div class="sm mu">Bleiben gespeichert. Einträge vor dem 20.11.2026 zählen nicht als Programmtage.</div>`;
+  sessA.forEach(s => {
+    const d = s.t ? new Date(s.t) : null;
+    const bits = [];
+    Object.keys(s.logs || {}).forEach(id => {
+      const sets = (s.logs[id] || []).filter(x => x && x.done);
+      if (!sets.length) return;
+      bits.push((EXD[id] ? EXD[id].name : id) + ": " + sets.map(x => (x.kg ? f1(x.kg, x.kg % 1 ? 1 : 0) + " kg × " : "") + x.r).join(", "));
+    });
+    h += `<div class="sm" style="margin-top:8px"><b>${d ? fmtL(d) : "Ohne Datum"}</b>${s.done ? " · erledigt" : ""}</div>`;
+    if (bits.length) h += `<div class="xs mu">${esc(bits.join(" · "))}</div>`;
+  });
+  if (mk.length) h += `<div class="xs mu" style="margin-top:8px">${mk.length} Messwerte aus dem vorherigen Kalender bleiben hier und wandern nicht in die neuen Checkwochen.</div>`;
+  return h + `</div>`;
 }
 function guide(id) {
   const e = EXD[id];
@@ -413,7 +500,7 @@ function guide(id) {
   <div class="row wrapc" style="gap:4px;margin:10px 0"><span class="chip">${esc(e.plan)}</span><span class="chip">Sätze ${esc(e.saetze)}</span><span class="chip">${esc(e.wl || "Wdh.")} ${esc(e.wdh)}</span><span class="chip">Pause ${esc(e.pause)}</span><span class="chip g">RIR ${esc(e.rir)}</span></div>
   <h3>So geht's</h3>${e.punkte.map(p => `<div class="li"><span style="color:var(--te)">✓</span><span>${esc(p)}</span></div>`).join("")}
   <h3 style="margin-top:8px;color:var(--re)">Typische Fehler</h3>${e.fehler.map(p => `<div class="li"><span>⚠️</span><span>${esc(p)}</span></div>`).join("")}
-  <div class="hint" style="margin-top:10px">🎯 Zielmuskel: ${esc(e.ziel)}</div>${e.fb ? '<div class="xs mu" style="margin-top:6px">Bild: schematische Zeichnung.</div>' : ""}`;
+  <div class="hint" style="margin-top:10px">🎯 Zielmuskel: ${esc(e.ziel)}</div>${e.ersatz ? `<div class="hint">Ersatz, wenn der Platz belegt ist oder das Gerät fehlt: ${esc(e.ersatz)}</div>` : ""}${e.fb ? '<div class="xs mu" style="margin-top:6px">Bild: schematische Zeichnung.</div>' : ""}`;
   $("#modal").classList.add("on");
 }
 
@@ -448,6 +535,7 @@ document.addEventListener("click", ev => {
   }
   if (d.add) { const [k, id] = d.add.split("|"); S.logs[k] = S.logs[k] || {}; const a = S.logs[k][id] = S.logs[k][id] || []; const se = sess(...k.split(":").map(Number)); const idx = UNITS[se.unit].findIndex(u => u.id === id); const n = Math.max(a.length, setsFor(se.w, se.s, idx, se.unit)); a[n] = {}; save(); render(); return; }
   if (d.finish) { const [w, s] = d.finish.split(":").map(Number), se = sess(w, s);
+    if (!se) return;
     if (S.done[d.finish]) { delete S.done[d.finish]; if (se.unit === "H") S.act[w + ":hw"] = false; save(); render(); return; }
     S.done[d.finish] = Date.now(); if (se.unit === "H") S.act[w + ":hw"] = true; save(); confetti(false); toast(se.unit === "H" ? "Hotel Held! +" + XP.hotel + " XP" : "Einheit geschafft! +" + XP.session + " XP"); celebrateCheck(); render(); return; }
   if (d.act) { const key = d.act;
@@ -457,20 +545,20 @@ document.addEventListener("click", ev => {
   if (d.wkopen) { const w = +d.wkopen; viewWeek = viewWeek === w ? null : w; render(); return; }
   if (d.pw !== undefined) { progWeek = +d.pw; render(); return; }
   if (d.we) { S.set.we = d.we; save(); render(); toast("Dritte Einheit: " + (d.we === "sa" ? "Samstag" : "Sonntag")); return; }
-  if (d.shift !== undefined) { const w = +$("#shw").value, s = +$("#shs").value, dd = +$("#shd").value; S.set.shift[w + ":" + s] = dd; save(); render(); toast("Woche " + w + ": Einheit " + (s + 1) + " auf " + DAYL[dd]); return; }
+  if (d.shift !== undefined) { const w = +$("#shw").value, s = +$("#shs").value, dd = +$("#shd").value; if (!planSlots(w).some(sl => sl.s === s)) { toast("Diese Einheit gibt es in Woche " + w + " nicht"); return; } S.set.shift[w + ":" + s] = dd; save(); render(); toast("Woche " + w + ": Einheit " + (s + 1) + " auf " + DAYL[dd]); return; }
   if (d.unshift) { delete S.set.shift[d.unshift]; save(); render(); return; }
   if (d.export !== undefined) { exportData(); return; }
-  if (d.reset !== undefined) { if (confirm("Wirklich ALLE Daten löschen? Das lässt sich nicht rückgängig machen. Tipp: vorher exportieren.") && confirm("Letzte Sicherheitsfrage: Alles löschen?")) { S = blank(); save(); render(); toast("Daten zurückgesetzt"); } return; }
+  if (d.reset !== undefined) { if (confirm("Wirklich ALLE Daten löschen? Das lässt sich nicht rückgängig machen. Tipp: vorher exportieren.") && confirm("Letzte Sicherheitsfrage: Alles löschen?")) { S = blank(); S.cal = CAL; save(); render(); toast("Daten zurückgesetzt"); } return; }
 });
 document.addEventListener("change", ev => {
   const t = ev.target, d = t.dataset;
   if (d.in) { const [k, id, j, f] = d.in.split("|"); const v = f === "kg" ? num(t.value) : parseInt(t.value, 10); setLog(k, id, +j, f, isNaN(v) ? null : v); save(); return; }
   if (d.meas) { const v = t.value.trim().replace(".", ","); if (v === "") delete S.meas[d.meas]; else if (isNaN(num(v))) { toast("Bitte eine Zahl eingeben"); return; } else S.meas[d.meas] = v; save(); celebrateCheck(); render(); toast("Gespeichert"); return; }
   if (d.sx !== undefined) { strengthEx = t.value; render(); return; }
-  if (d.import !== undefined && t.files[0]) { const r = new FileReader(); r.onload = () => { try { const p = JSON.parse(r.result); if (!p || p.v !== 1 || !p.logs) throw 0; if (confirm("Import ersetzt die aktuellen Daten auf diesem Gerät. Fortfahren?")) { S = Object.assign(blank(), p); S.set = Object.assign({ we: "sa", shift: {} }, p.set || {}); save(); render(); toast("Import erfolgreich"); } } catch (e) { toast("Datei ist kein Franz Fitness Export"); } }; r.readAsText(t.files[0]); t.value = ""; }
+  if (d.import !== undefined && t.files[0]) { const r = new FileReader(); r.onload = () => { try { const p = JSON.parse(r.result); if (!p || p.v !== 1 || !p.logs) throw 0; if (confirm("Import ersetzt die aktuellen Daten auf diesem Gerät. Fortfahren?")) { S = Object.assign(blank(), p); S.set = Object.assign({ we: "sa", shift: {} }, p.set || {}); if (!p.cal) delete S.cal; migrate(); save(); render(); toast("Import erfolgreich"); } } catch (e) { toast("Datei ist kein Franz Fitness Export"); } }; r.readAsText(t.files[0]); t.value = ""; }
 });
 function exportData() {
-  const name = "franz-fitness-" + new Date().toISOString().slice(0, 10) + ".json", blob = new Blob([JSON.stringify(Object.assign({ exportiert: new Date().toISOString(), app: "Franz Fitness v1" }, S), null, 1)], { type: "application/json" });
+  const name = "franz-fitness-" + new Date().toISOString().slice(0, 10) + ".json", blob = new Blob([JSON.stringify(Object.assign({ exportiert: new Date().toISOString(), app: "Franz Fitness v3" }, S), null, 1)], { type: "application/json" });
   try { const f = new File([blob], name, { type: "application/json" }); if (navigator.canShare && navigator.canShare({ files: [f] })) { navigator.share({ files: [f], title: "Franz Fitness Export" }).catch(() => dl(blob, name)); return; } } catch (e) { }
   dl(blob, name);
 }
@@ -478,7 +566,7 @@ function dl(blob, name) { const a = document.createElement("a"); a.href = URL.cr
 
 /* ---------- Start ---------- */
 EXDATA.forEach(e => { if (FALLBACK.includes(e.id)) e.fb = true; });
-load(); if (!S.lvl) S.lvl = xpInfo().lvl;
+load(); migrate(); if (!S.lvl) S.lvl = xpInfo().lvl;
 render();
 if (/^https?:/.test(location.protocol)) {
   const l = document.createElement("link"); l.rel = "manifest"; l.href = "manifest.json"; document.head.appendChild(l);
