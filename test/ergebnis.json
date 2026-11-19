@@ -5,27 +5,47 @@
   ""
  ],
  [
-  "Heute zeigt Einheit A am Mo 9.11.",
+  "Tag 1 zeigt Start 20.11.2026",
   true,
   ""
  ],
  [
-  "Woche 1 Übungen A",
+  "Tag 1 ist Einheit A",
   true,
-  "6"
+  ""
  ],
  [
-  "Satz gespeichert",
+  "Woche 1 hat 7 Übungen A",
+  true,
+  "7"
+ ],
+ [
+  "Erste Übung ist Kurzhantel Bankdrücken",
+  true,
+  ""
+ ],
+ [
+  "Ersatz Chest Press steht dabei",
+  true,
+  ""
+ ],
+ [
+  "Reihenfolge Einheit A",
+  true,
+  "1. Kurzhantel Bankdrücken flach | 2. Schrägpresse scheibenbeladen | 3. Latzug | 4. Einarmiges Kurzhantelrudern | 5. Goblet Squat | 6. Bizepscurl Kurzhanteln | 7. Trizepsdrücken mit Seil"
+ ],
+ [
+  "Satz gespeichert unter altem Schlüssel",
   true,
   ""
  ],
  [
   "Pausentimer läuft",
   true,
-  "1:59"
+  "2:00"
  ],
  [
-  "XP für Satz (5 XP)",
+  "XP für Satz",
   true,
   "5"
  ],
@@ -35,152 +55,82 @@
   ""
  ],
  [
-  "Neuladen behält Haken",
+  "Anleitung mit Bild und Ersatz",
   true,
   ""
  ],
  [
-  "Anleitung öffnet",
+  "Woche 1 Freitag und Sonntag",
   true,
   ""
  ],
  [
-  "Streak 4 Wochen (Reisewoche 2 mit 1 Einheit plus Hotel)",
-  true,
-  "{\"weekStreak\": 4, \"bestWeek\": 4, \"sessStreak\": 1, \"total\": 9}"
- ],
- [
-  "Krafteinheiten 9 (8 plus Hotel Bonus)",
+  "Woche 2 Montag A, Mittwoch B, Samstag A",
   true,
   ""
  ],
  [
-  "XP 640 = 8x50 + 40 Hotel + 4x50 Streakwochen",
-  true,
-  "640"
- ],
- [
-  "Level 3 Kabelzug Flüsterer",
-  true,
-  "Kabelzug Flüsterer"
- ],
- [
-  "Abzeichen b1 b2 b3 b5 b17",
-  true,
-  "b1,b2,b3,b5,b17"
- ],
- [
-  "Woche 5: 1 Einheit plus Hotel zählt nicht (keine Reisewoche)",
+  "Sonntag als dritter Tag ab Woche 2",
   true,
   ""
  ],
  [
-  "Woche 2 zählt (Reisewoche)",
+  "Deload Woche 12 beginnt Mo 1.2.2027 mit 2 Sätzen",
   true,
   ""
  ],
  [
-  "Wo 2 Einheit 2 am Fr 20.11.",
+  "Ab Woche 4 hat Bankdrücken 3 Sätze, auch in Einheit 3",
   true,
   ""
  ],
  [
-  "Wo 6 Einheit 2 ist Hotel Workout",
+  "Woche 21 endet So 11.4.2027",
   true,
   ""
  ],
  [
-  "Wo 6 Einheit 3 am So 20.12. (Einheit B)",
+  "Checkwochen bleiben 4, 8, 12, 16, 20, 21",
   true,
   ""
  ],
  [
-  "Wo 20 Einheit 3 am Sa 27.3.",
+  "19.11. zeigt Countdown auf Tag 1",
   true,
   ""
  ],
  [
-  "Wo 1 beginnt Mo 9.11.2026",
+  "1.2.2027 zeigt Deload",
   true,
   ""
  ],
  [
-  "Wo 21 Montag ist Ostermontag 29.3.2027",
+  "Migration behält den Schlüssel und setzt den Kalender",
+  true,
+  "{\"cal\": \"tag1-2026-11-20\", \"done\": [\"1:0\"], \"hasOld\": true, \"remapped\": true, \"archive\": 1, \"meas1\": \"111,5\", \"meas0\": \"113\", \"act\": true, \"total\": 1, \"xp\": 100}"
+ ],
+ [
+  "Eintrag vor dem 20.11. zählt nicht und liegt im Archiv",
+  true,
+  "{\"cal\": \"tag1-2026-11-20\", \"done\": [\"1:0\"], \"hasOld\": true, \"remapped\": true, \"archive\": 1, \"meas1\": \"111,5\", \"meas0\": \"113\", \"act\": true, \"total\": 1, \"xp\": 100}"
+ ],
+ [
+  "Freitag 20.11. aus dem alten Plan liegt auf Tag 1",
   true,
   ""
  ],
  [
-  "Wo 12 Deload beginnt Mo 25.1.2027",
+  "Messwert vor dem Start wandert nicht in Woche 1",
+  true,
+  "{\"cal\": \"tag1-2026-11-20\", \"done\": [\"1:0\"], \"hasOld\": true, \"remapped\": true, \"archive\": 1, \"meas1\": \"111,5\", \"meas0\": \"113\", \"act\": true, \"total\": 1, \"xp\": 100}"
+ ],
+ [
+  "Frühere Einträge sind sichtbar",
   true,
   ""
  ],
  [
-  "Wo 2 beginnt mit Einheit B",
-  true,
-  ""
- ],
- [
-  "Deload Wo 12 Brustpresse 2 Sätze",
-  true,
-  ""
- ],
- [
-  "Wo 4 Brustpresse 3 Sätze, 3. Einheit 2",
-  true,
-  ""
- ],
- [
-  "Bestleistung erkannt",
-  true,
-  ""
- ],
- [
-  "Sonntag als 3. Tag",
-  true,
-  ""
- ],
- [
-  "Einheit verschieben auf Do",
-  true,
-  ""
- ],
- [
-  "Export liefert JSON mit Daten",
-  true,
-  "franz-fitness-2026-10-30.json"
- ],
- [
-  "Zurücksetzen mit Bestätigung leert Daten",
-  true,
-  ""
- ],
- [
-  "Import stellt Daten wieder her",
-  true,
-  ""
- ],
- [
-  "Import bleibt nach Neuladen",
-  true,
-  ""
- ],
- [
-  "Mi 16.12. zeigt Hotel Workout",
-  true,
-  ""
- ],
- [
-  "Wo 6: 1 Einheit plus Hotel Workout zählt",
-  true,
-  ""
- ],
- [
-  "Mo 2.11. zeigt Countdown 7 Tage bis Start 9.11.2026",
-  true,
-  ""
- ],
- [
-  "Mo 29.3.2027 ist Woche 21 mit Ostermontag Hinweis",
+  "Sonntag 22.11. ist Einheit B",
   true,
   ""
  ],

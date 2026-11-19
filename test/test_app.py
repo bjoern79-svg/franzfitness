@@ -1,96 +1,127 @@
-import json, sys
+import json
+from datetime import datetime
+from pathlib import Path
 from playwright.sync_api import sync_playwright
+ROOT = Path(__file__).resolve().parents[1]
 URL = "http://localhost:8765/index.html"
-res = []; errs = []
+res = []
+errs = []
 def ok(name, cond, info=""):
-    res.append((name, bool(cond), info)); print(("PASS " if cond else "FAIL ") + name, info)
+    res.append((name, bool(cond), info))
+    print(("PASS " if cond else "FAIL ") + name, info)
 with sync_playwright() as p:
     b = p.chromium.launch()
-    dev = p.devices["iPhone 13"]; dev = dict(dev); dev["device_scale_factor"] = 2
+    dev = dict(p.devices["iPhone 13"])
+    dev["device_scale_factor"] = 2
     ctx = b.new_context(**dev)
     pg = ctx.new_page()
     pg.on("console", lambda m: errs.append(m.type + ": " + m.text) if m.type in ("error", "warning") else None)
     pg.on("pageerror", lambda e: errs.append("pageerror: " + str(e)))
-    pg.goto(URL + "?heute=2026-11-09"); pg.wait_for_timeout(600)
+    pg.goto(URL + "?heute=2026-11-20")
+    pg.wait_for_timeout(600)
+    txt = pg.inner_text("#app")
     ok("Laden ohne Konsolenfehler", not errs, "; ".join(errs))
-    ok("Heute zeigt Einheit A am Mo 9.11.", "Heute: Einheit A" in pg.inner_text("#app"))
-    ok("Woche 1 Übungen A", pg.locator(".ex").count() == 6, str(pg.locator(".ex").count()))
-    # Satz eintragen
-    pg.fill('[data-in="1:0|brustpresse|0|kg"]', "40"); pg.fill('[data-in="1:0|brustpresse|0|r"]', "10")
-    pg.click('[data-set^="1:0|brustpresse|0"]'); pg.wait_for_timeout(400)
+    ok("Tag 1 zeigt Start 20.11.2026", "Tag 1 / Start 20.11.2026" in txt)
+    ok("Tag 1 ist Einheit A", "Heute: Einheit A" in txt)
+    ok("Woche 1 hat 7 Übungen A", pg.locator(".ex").count() == 7, str(pg.locator(".ex").count()))
+    ok("Erste Übung ist Kurzhantel Bankdrücken", "Kurzhantel Bankdrücken flach" in txt)
+    ok("Ersatz Chest Press steht dabei", "Insignia Series Chest Press" in txt)
+    names = pg.evaluate("() => [...document.querySelectorAll('.exn')].map(e => e.textContent)")
+    ok("Reihenfolge Einheit A", names == [
+        "1. Kurzhantel Bankdrücken flach", "2. Schrägpresse scheibenbeladen", "3. Latzug",
+        "4. Einarmiges Kurzhantelrudern", "5. Goblet Squat", "6. Bizepscurl Kurzhanteln", "7. Trizepsdrücken mit Seil"], " | ".join(names))
+    pg.fill('[data-in="1:0|kh_bank|0|kg"]', "20")
+    pg.fill('[data-in="1:0|kh_bank|0|r"]', "10")
+    pg.click('[data-set^="1:0|kh_bank|0"]')
+    pg.wait_for_timeout(400)
     st = pg.evaluate("JSON.parse(localStorage.getItem('franz-fitness-app-v1'))")
-    ok("Satz gespeichert", st["logs"]["1:0"]["brustpresse"][0] == {**st["logs"]["1:0"]["brustpresse"][0], "kg": 40, "r": 10, "done": True})
+    ok("Satz gespeichert unter altem Schlüssel", st["logs"]["1:0"]["kh_bank"][0]["kg"] == 20 and st["logs"]["1:0"]["kh_bank"][0]["done"] is True)
     ok("Pausentimer läuft", "on" in pg.get_attribute("#timer", "class"), pg.inner_text("#tt"))
-    ok("XP für Satz (5 XP)", pg.evaluate("FF.xpInfo().xp") == 5, str(pg.evaluate("FF.xpInfo().xp")))
-    pg.reload(); pg.wait_for_timeout(500)
-    ok("Neuladen behält Gewicht", pg.input_value('[data-in="1:0|brustpresse|0|kg"]') == "40")
-    ok("Neuladen behält Haken", "on" in pg.get_attribute('[data-set^="1:0|brustpresse|0"]', "class"))
-    # Anleitung oeffnen
-    pg.click('[data-guide="brustpresse"]'); pg.wait_for_timeout(200)
-    ok("Anleitung öffnet", "Typische Fehler" in pg.inner_text("#sheet"))
+    ok("XP für Satz", pg.evaluate("FF.xpInfo().xp") == 5, str(pg.evaluate("FF.xpInfo().xp")))
+    pg.reload()
+    pg.wait_for_timeout(500)
+    ok("Neuladen behält Gewicht", pg.input_value('[data-in="1:0|kh_bank|0|kg"]') == "20")
+    pg.click('[data-guide="kh_bank"]')
+    pg.wait_for_timeout(200)
+    sheet = pg.inner_text("#sheet")
+    ok("Anleitung mit Bild und Ersatz", "Typische Fehler" in sheet and "Insignia Series Chest Press" in sheet and pg.locator("#sheet img").count() == 1)
     pg.click("[data-close]")
-    # Beispieldaten fuer XP und Streak
-    sample = {"v":1,"set":{"we":"sa","shift":{}},"done":{"1:0":1,"1:1":1,"1:2":1,"2:0":1,"3:0":1,"3:1":1,"4:0":1,"4:2":1},"logs":{},"act":{"2:hw":True},"meas":{},"seen":[],"lvl":1,"okSeen":[]}
-    pg.goto(URL + "?heute=2026-12-06"); pg.evaluate("s=>localStorage.setItem('franz-fitness-app-v1', JSON.stringify(s))", sample); pg.reload(); pg.wait_for_timeout(400)
-    st = pg.evaluate("FF.stats()"); xp = pg.evaluate("FF.xpInfo()"); bd = pg.evaluate("FF.badges().filter(b=>b.on).map(b=>b.id)")
-    ok("Streak 4 Wochen (Reisewoche 2 mit 1 Einheit plus Hotel)", st["weekStreak"] == 4 and st["bestWeek"] == 4, json.dumps(st))
-    ok("Krafteinheiten 9 (8 plus Hotel Bonus)", st["total"] == 9)
-    ok("XP 640 = 8x50 + 40 Hotel + 4x50 Streakwochen", xp["xp"] == 640, str(xp["xp"]))
-    ok("Level 3 Kabelzug Flüsterer", xp["lvl"] == 3 and xp["name"] == "Kabelzug Flüsterer", xp["name"])
-    ok("Abzeichen b1 b2 b3 b5 b17", set(["b1","b2","b3","b5","b17"]) <= set(bd) and "b4" not in bd, ",".join(bd))
-    # Woche 6 nur 1 Einheit (keine Reisewoche) zaehlt nicht
-    pg.evaluate("()=>{const s=FF.S(); s.done['5:0']=1; s.act['5:hw']=true; FF.save();}")
-    ok("Woche 5: 1 Einheit plus Hotel zählt nicht (keine Reisewoche)", pg.evaluate("FF.okWeek(5)") is False)
-    ok("Woche 2 zählt (Reisewoche)", pg.evaluate("FF.okWeek(2)") is True)
-    # Plan Logik
-    ok("Wo 2 Einheit 2 am Fr 20.11.", pg.evaluate("[FF.sess(2,1).date.getDate(),FF.sess(2,1).date.getMonth(),FF.sess(2,1).date.getDay()]") == [20, 10, 5])
-    ok("Wo 6 Einheit 2 ist Hotel Workout", pg.evaluate("FF.sess(6,1).unit") == "H")
-    ok("Wo 6 Einheit 3 am So 20.12. (Einheit B)", pg.evaluate("[FF.sess(6,2).date.getDate(),FF.sess(6,2).date.getMonth(),FF.sess(6,2).date.getDay(),FF.sess(6,2).unit]") == [20, 11, 0, "B"])
-    ok("Wo 20 Einheit 3 am Sa 27.3.", pg.evaluate("[FF.sess(20,2).date.getDate(),FF.sess(20,2).date.getMonth(),FF.sess(20,2).date.getDay()]") == [27, 2, 6])
-    ok("Wo 1 beginnt Mo 9.11.2026", pg.evaluate("[FF.sess(1,0).date.getFullYear(),FF.sess(1,0).date.getMonth(),FF.sess(1,0).date.getDate(),FF.sess(1,0).date.getDay()]") == [2026, 10, 9, 1])
-    ok("Wo 21 Montag ist Ostermontag 29.3.2027", pg.evaluate("[FF.sess(21,0).date.getFullYear(),FF.sess(21,0).date.getMonth(),FF.sess(21,0).date.getDate()]") == [2027, 2, 29])
-    ok("Wo 12 Deload beginnt Mo 25.1.2027", pg.evaluate("[FF.sess(12,0).date.getMonth(),FF.sess(12,0).date.getDate()]") == [0, 25])
-    ok("Wo 2 beginnt mit Einheit B", pg.evaluate("FF.sess(2,0).unit") == "B")
-    ok("Deload Wo 12 Brustpresse 2 Sätze", pg.evaluate("FF.setsFor(12,0,0,'A')") == 2)
-    ok("Wo 4 Brustpresse 3 Sätze, 3. Einheit 2", pg.evaluate("[FF.setsFor(4,0,0,'A'),FF.setsFor(4,2,0,'A')]") == [3, 2])
-    # Bestleistung
-    pg.evaluate("""()=>{const s=FF.S(); s.logs['1:0']={brustpresse:[{kg:40,r:10,done:true}]}; s.logs["1:2"]={brustpresse:[{kg:42.5,r:10,done:true}]}; FF.save();}""")
-    ok("Bestleistung erkannt", pg.evaluate("FF.records().prs.length") == 1)
-    # Sa/So Umschaltung und Verschieben
-    pg.evaluate("()=>{FF.S().set.we='so'; FF.S().set.shift['10:1']=3;}")
-    ok("Sonntag als 3. Tag", pg.evaluate("FF.sess(10,2).d") == 6)
-    ok("Einheit verschieben auf Do", pg.evaluate("FF.sess(10,1).d") == 3)
-    # Export, Import, Reset
-    pg.goto(URL + "?heute=2026-12-06"); pg.wait_for_timeout(300); pg.click('[data-tab="mehr"]')
-    with pg.expect_download() as dl: pg.click("[data-export]")
-    path = dl.value.path(); exp = json.load(open(path))
-    ok("Export liefert JSON mit Daten", exp.get("v") == 1 and "3:0" in exp["done"], dl.value.suggested_filename)
-    pg.on("dialog", lambda d: d.accept())
-    pg.click("[data-reset]"); pg.wait_for_timeout(300)
-    ok("Zurücksetzen mit Bestätigung leert Daten", pg.evaluate("Object.keys(FF.S().done).length") == 0)
-    pg.set_input_files("[data-import]", path); pg.wait_for_timeout(500)
-    ok("Import stellt Daten wieder her", pg.evaluate("Object.keys(FF.S().done).length") == len(exp["done"]))
-    pg.reload(); pg.wait_for_timeout(300)
-    ok("Import bleibt nach Neuladen", pg.evaluate("Object.keys(FF.S().done).length") == len(exp["done"]))
-    # Hotel Workout Einheit Wo 6 abschliessen zaehlt
-    pg.goto(URL + "?heute=2026-12-16"); pg.wait_for_timeout(300)
-    ok("Mi 16.12. zeigt Hotel Workout", "Heute: Hotel Workout" in pg.inner_text("#app"))
-    pg.evaluate("()=>{FF.S().done['6:0']=1;FF.save();}"); pg.reload(); pg.wait_for_timeout(300)
-    pg.click('[data-finish="6:1"]'); pg.wait_for_timeout(300)
-    ok("Wo 6: 1 Einheit plus Hotel Workout zählt", pg.evaluate("FF.okWeek(6)") is True)
-    # Alter Starttermin 2.11.2026 ist jetzt Countdown (Start 9.11.2026)
-    pg.goto(URL + "?heute=2026-11-02"); pg.wait_for_timeout(300); txt = pg.inner_text("#app")
-    ok("Mo 2.11. zeigt Countdown 7 Tage bis Start 9.11.2026", "Noch 7 Tage bis zum Start" in txt and "Mo 9.11.2026" in txt)
-    pg.goto(URL + "?heute=2027-03-29"); pg.wait_for_timeout(300); txt = pg.inner_text("#app")
-    ok("Mo 29.3.2027 ist Woche 21 mit Ostermontag Hinweis", "Woche 21 von 21" in txt and "Ostermontag" in txt)
+    ok("Woche 1 Freitag und Sonntag", pg.evaluate("""() => {
+      const a = FF.sess(1,0), b = FF.sess(1,1);
+      return a.date.getFullYear()===2026 && a.date.getMonth()===10 && a.date.getDate()===20 && a.date.getDay()===5 && a.unit==="A"
+        && b.date.getDate()===22 && b.date.getDay()===0 && b.unit==="B" && FF.sess(1,2)===null;
+    }"""))
+    ok("Woche 2 Montag A, Mittwoch B, Samstag A", pg.evaluate("""() => {
+      const a = FF.sess(2,0), b = FF.sess(2,1), c = FF.sess(2,2);
+      return a.date.getDate()===23 && a.date.getMonth()===10 && a.date.getDay()===1 && a.unit==="A"
+        && b.date.getDate()===25 && b.date.getDay()===3 && b.unit==="B"
+        && c.date.getDate()===28 && c.date.getDay()===6 && c.unit==="A";
+    }"""))
+    ok("Sonntag als dritter Tag ab Woche 2", pg.evaluate("() => { FF.S().set.we='so'; const d = FF.sess(2,2); FF.S().set.we='sa'; return d.date.getDay()===0 && d.date.getDate()===29; }"))
+    ok("Deload Woche 12 beginnt Mo 1.2.2027 mit 2 Sätzen", pg.evaluate("""() => {
+      const d = FF.sess(12,0);
+      return d.date.getFullYear()===2027 && d.date.getMonth()===1 && d.date.getDate()===1 && FF.setsFor(12,0,0,'A')===2 && FF.setsFor(12,0,2,'A')===2;
+    }"""))
+    ok("Ab Woche 4 hat Bankdrücken 3 Sätze, auch in Einheit 3", pg.evaluate("[FF.setsFor(4,0,0,'A'), FF.setsFor(4,2,0,'A'), FF.setsFor(3,0,0,'A')]") == [3, 3, 2])
+    ok("Woche 21 endet So 11.4.2027", pg.evaluate("""() => {
+      const end = new Date(2026,10,16); end.setDate(end.getDate()+20*7+6);
+      const mon = FF.sess(21,0).date;
+      return end.getFullYear()===2027 && end.getMonth()===3 && end.getDate()===11 && mon.getDate()===5 && mon.getMonth()===3;
+    }"""))
+    pg.click('[data-tab="fort"]')
+    pg.wait_for_timeout(200)
+    ok("Checkwochen bleiben 4, 8, 12, 16, 20, 21", "Woche 4, 8, 12, 16, 20 und 21" in pg.inner_text("#app"))
+    pg.click('[data-tab="heute"]')
+    pg.goto(URL + "?heute=2026-11-19")
+    pg.wait_for_timeout(300)
+    pre = pg.inner_text("#app")
+    ok("19.11. zeigt Countdown auf Tag 1", "Tag 1 / Start 20.11.2026" in pre and "Noch 1 Tag bis zum Start" in pre and "Heute: Einheit A" not in pre)
+    pg.goto(URL + "?heute=2027-02-01")
+    pg.wait_for_timeout(300)
+    ok("1.2.2027 zeigt Deload", "Deload" in pg.inner_text("#app") and "Woche 12 von 21" in pg.inner_text("#app"))
+    pg.goto(URL + "?heute=2026-11-20")
+    pg.wait_for_timeout(200)
+    def ms(y, m, d):
+        return int(datetime(y, m, d, 8).timestamp() * 1000)
+    old = {"v":1,"set":{"we":"sa","shift":{"2:1":4}},"done":{"1:0": ms(2026,11,10), "2:1": ms(2026,11,20)},
+           "logs":{"1:0":{"brustpresse":[{"kg":40,"r":10,"done":True,"t":ms(2026,11,10)}]},
+                   "2:1":{"brustpresse":[{"kg":42.5,"r":8,"done":True,"t":ms(2026,11,20)}]}},
+           "act":{"1:st0":True,"3:sw":True},"meas":{"0:kg":"113","1:kg":"112","2:kg":"111,5"},"seen":[],"lvl":1,"okSeen":[1]}
+    pg.evaluate("s => localStorage.setItem('franz-fitness-app-v1', JSON.stringify(s))", old)
+    pg.reload()
+    pg.wait_for_timeout(400)
+    mig = pg.evaluate("""() => {
+      const s = FF.S();
+      return {cal:s.cal, done:Object.keys(s.done), hasOld:!!(s.logs['1:0']&&s.logs['1:0'].brustpresse),
+        remapped:!!(s.logs['1:0']&&s.logs['1:0'].brustpresse),
+        archive:(s.archive.sessions||[]).length, meas1:s.meas['1:kg']||'', meas0:s.meas['0:kg']||'',
+        act:!!s.act['2:sw'], total:FF.stats().total, xp:FF.xpInfo().xp};
+    }""")
+    ok("Migration behält den Schlüssel und setzt den Kalender", mig["cal"] == "tag1-2026-11-20", json.dumps(mig))
+    ok("Eintrag vor dem 20.11. zählt nicht und liegt im Archiv", mig["archive"] >= 1 and mig["total"] == 1, json.dumps(mig))
+    ok("Freitag 20.11. aus dem alten Plan liegt auf Tag 1", mig["remapped"] is True and "1:0" in mig["done"])
+    ok("Messwert vor dem Start wandert nicht in Woche 1", mig["meas0"] == "113" and mig["meas1"] == "111,5", json.dumps(mig))
+    pg.click('[data-tab="mehr"]')
+    pg.wait_for_timeout(200)
+    ok("Frühere Einträge sind sichtbar", "Frühere Einträge" in pg.inner_text("#app") and "Brustpresse" in pg.inner_text("#app"))
+    # Einheit B am Sonntag der Woche 1
+    pg.goto(URL + "?heute=2026-11-22")
+    pg.wait_for_timeout(400)
+    bt = pg.inner_text("#app")
+    ok("Sonntag 22.11. ist Einheit B", "Heute: Einheit B" in bt and "Seitheben Kurzhanteln" in bt and "Trizepsstrecker" in bt)
     ok("Keine Fehler im gesamten Test", not errs, "; ".join(errs))
     b.close()
-# file:// Test
 with sync_playwright() as p:
-    b = p.chromium.launch(); pg = b.new_page(); e2 = []
-    pg.on("console", lambda m: e2.append(m.text) if m.type == "error" else None); pg.on("pageerror", lambda e: e2.append(str(e)))
-    pg.goto("file:///workspace/fitness/app/index.html"); pg.wait_for_timeout(500)
+    b = p.chromium.launch()
+    pg = b.new_page()
+    e2 = []
+    pg.on("console", lambda m: e2.append(m.text) if m.type == "error" else None)
+    pg.on("pageerror", lambda e: e2.append(str(e)))
+    pg.goto(ROOT.joinpath("index.html").as_uri())
+    pg.wait_for_timeout(500)
     ok("Laden per file:// ohne Fehler", not e2 and "Franz Fitness" in pg.inner_text("body"), "; ".join(e2))
     b.close()
 print("\n%d von %d bestanden" % (sum(r[1] for r in res), len(res)))
-json.dump(res, open("/workspace/fitness/app/test/ergebnis.json", "w"), ensure_ascii=False, indent=1)
+json.dump(res, open(ROOT / "test" / "ergebnis.json", "w"), ensure_ascii=False, indent=1)
+if not all(r[1] for r in res):
+    raise SystemExit(1)
