@@ -52,7 +52,18 @@ const SPRUECHE = ["Der Start zählt. Brust raus, Plan steht.", "Erst Technik, da
 const CHEERS = ["Stark, das zählt!", "Wieder einer im Sack.", "Brust raus, Haken drin.", "Sauber!", "Ein Satz mehr, ein Zweifel weniger.", "Weiter so, Bjoern!"];
 const LEVELS = [[0, "Sofa Kapitän"], [200, "Hantel Neuling"], [500, "Kabelzug Flüsterer"], [900, "Brustpresse Pirat"], [1400, "Latzug Lord"],
   [2000, "Bankdrück Baron"], [2800, "Eisen Enthusiast"], [3800, "Rekomp Rakete"], [5000, "Franz der Starke"], [6500, "Legende von Leipzig"], [8500, "Olymp von Markkleeberg"]];
-const XP = { set: 5, session: 50, hotel: 40, swim: 30, jog: 30, steps: 10, prot: 10, kg: 15, bf: 25, pr: 25, week: 50 };
+const XP = { set: 5, session: 50, hotel: 40, swim: 30, jog: 30, steps: 10, prot: 10, kg: 15, bf: 25, pr: 25, week: 50, core: 20, coreWeek: 50, coreStretch: 20 };
+const CORE = [
+  { id: "plank", reps: "20 bis 40 Sekunden" },
+  { id: "seitstutz", reps: "15 bis 30 Sekunden je Seite" },
+  { id: "deadbug", reps: "6 bis 8 je Seite" },
+  { id: "birddog", reps: "6 bis 8 je Seite" },
+  { id: "crunch", reps: "8 bis 12" },
+  { id: "revcrunch", reps: "8 bis 12" },
+  { id: "pallof", reps: "8 bis 12 je Seite" }
+];
+function coreGoal(w) { return w === 1 ? 2 : 4; }
+function coreStretchN(w) { return w === 1 ? 3 : 5; }
 
 /* ---------- Zeit und Plan ---------- */
 const P = new URLSearchParams(location.search);
@@ -154,17 +165,50 @@ function migrate() {
 function repRange(id) { const m = (EXD[id].wdh || "").match(/(\d+)\s*bis\s*(\d+)/); return m ? [+m[1], +m[2]] : [8, 12]; }
 
 /* ---------- Speicher ---------- */
-function blank() { return { v: 1, set: { we: "sa", shift: {} }, done: {}, logs: {}, act: {}, meas: {}, seen: [], lvl: 0, okSeen: [] }; }
+function blank() { return { v: 1, set: { we: "sa", shift: {} }, done: {}, logs: {}, act: {}, meas: {}, seen: [], lvl: 0, okSeen: [], core: {}, coreSeen: [] }; }
+function ensureShape() {
+  if (!S.set || typeof S.set !== "object") S.set = { we: "sa", shift: {} };
+  if (!S.act || typeof S.act !== "object" || Array.isArray(S.act)) S.act = {};
+  if (!S.logs || typeof S.logs !== "object" || Array.isArray(S.logs)) S.logs = {};
+  if (!S.done || typeof S.done !== "object" || Array.isArray(S.done)) S.done = {};
+  if (!S.meas || typeof S.meas !== "object" || Array.isArray(S.meas)) S.meas = {};
+  if (!S.core || typeof S.core !== "object" || Array.isArray(S.core)) S.core = {};
+  if (!Array.isArray(S.coreSeen)) S.coreSeen = [];
+  if (!Array.isArray(S.seen)) S.seen = [];
+  if (!Array.isArray(S.okSeen)) S.okSeen = [];
+}
 let S = blank(), storageOK = true;
 function load() {
   try { const r = localStorage.getItem(KEY); if (r) { const p = JSON.parse(r); S = Object.assign(blank(), p); S.set = Object.assign({ we: "sa", shift: {} }, p.set || {}); } }
   catch (e) { storageOK = false; }
+  ensureShape();
 }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); storageOK = true; } catch (e) { storageOK = false; } }
 
 /* ---------- Auswertung ---------- */
 const act = (w, k) => S.act[w + ":" + k] === true;
 const isDone = (w, s) => !!S.done[w + ":" + s];
+function todaySlot() {
+  const t = today();
+  let w = weekOf(t);
+  if (w < 1) w = 1;
+  if (w > TOTAL) w = TOTAL;
+  let d = Math.round((t - wDate(w, 0)) / 864e5);
+  if (d < 0) d = 0;
+  if (d > 6) d = 6;
+  return { w, d, t };
+}
+function coreCount(w) { let n = 0; for (let d = 0; d < 7; d++) if (act(w, "co" + d)) n++; return n; }
+function coreOk(w) { return coreCount(w) >= coreGoal(w); }
+function coreStreaks() {
+  let last = 0; for (let w = 1; w <= TOTAL; w++) if (coreCount(w) > 0) last = w;
+  let i = Math.max(weekOf(today()) < 1 ? 0 : curWeek(), last);
+  if (i >= 1 && !coreOk(i)) i--;
+  let streak = 0; while (i >= 1 && coreOk(i)) { streak++; i--; }
+  let best = 0, run = 0; for (let w = 1; w <= TOTAL; w++) { if (coreOk(w)) { run++; best = Math.max(best, run); } else run = 0; }
+  let days = 0; for (let w = 1; w <= TOTAL; w++) days += coreCount(w);
+  return { streak, best, days };
+}
 function kraftCount(w) { return planSlots(w).filter(sl => isDone(w, sl.s)).length; }
 const okWeek = w => kraftCount(w) >= 2;
 function sessionsFlat() { const o = []; for (let w = 1; w <= TOTAL; w++) planSlots(w).forEach(sl => o.push(!!isDone(w, sl.s))); return o; }
@@ -200,22 +244,24 @@ function xpInfo() {
   let x = 0; const b = {};
   const add = (k, n) => { b[k] = (b[k] || 0) + n * XP[k]; x += n * XP[k]; };
   add("set", countSets());
-  let ses = 0, hot = 0, sw = 0, jo = 0, st = 0, pr = 0, kg = 0, bf = 0, wk = 0;
+  let ses = 0, hot = 0, sw = 0, jo = 0, st = 0, pr = 0, kg = 0, bf = 0, wk = 0, co = 0, cow = 0, cos = 0;
   for (let w = 1; w <= TOTAL; w++) {
     planSlots(w).forEach(sl => { if (isDone(w, sl.s)) ses++; });
     if (act(w, "hw")) hot++; if (act(w, "sw")) sw++; if (act(w, "jo")) jo++;
     for (let d = 0; d < 7; d++) { if (act(w, "st" + d)) st++; if (act(w, "pr" + d)) pr++; }
     if (num(S.meas[w + ":kg"]) > 0) kg++; if (num(S.meas[w + ":bf"]) > 0) bf++;
     if (okWeek(w)) wk++;
+    const c = coreCount(w); co += c; if (c >= coreGoal(w)) cow++; if (c >= coreStretchN(w)) cos++;
   }
   add("session", ses); add("hotel", hot); add("swim", sw); add("jog", jo); add("steps", st); add("prot", pr); add("kg", kg); add("bf", bf); add("week", wk);
+  add("core", co); add("coreWeek", cow); add("coreStretch", cos);
   add("pr", records().prs.length);
   let li = 0; LEVELS.forEach((l, i) => { if (x >= l[0]) li = i; });
   const cur = LEVELS[li][0], nxt = LEVELS[li + 1] ? LEVELS[li + 1][0] : cur;
   return { xp: x, parts: b, lvl: li + 1, name: LEVELS[li][1], cur, nxt, pct: nxt > cur ? (x - cur) / (nxt - cur) : 1 };
 }
 function badges() {
-  const st = stats(), R = records(), X = xpInfo();
+  const st = stats(), R = records(), X = xpInfo(), CS = coreStreaks();
   let hotel = false, swim = 0, jog = 0, fs = false, fp = false, fw = false, wts = 0;
   for (let w = 1; w <= TOTAL; w++) {
     if (act(w, "sw")) swim++; if (act(w, "jo")) jog++; if (act(w, "hw")) hotel = true;
@@ -244,7 +290,10 @@ function badges() {
     ["b20", "💪", "5 Bestleistungen", "Fünf persönliche Rekorde.", R.prs.length >= 5],
     ["b15", "🥇", "50 Einheiten", "50 von " + PLAN_N + " Krafteinheiten.", st.total >= 50],
     ["b16", "🎯", "Zielgerade", "Woche 21 mit mindestens 2 von 3.", okWeek(21)],
-    ["b21", "⭐", "Level 5", "Level 5 erreicht: " + LEVELS[4][1] + ".", X.lvl >= 5]
+    ["b21", "⭐", "Level 5", "Level 5 erreicht: " + LEVELS[4][1] + ".", X.lvl >= 5],
+    ["b22", "🧱", "Core Start", "Ersten Core Tag geschafft.", CS.days >= 1],
+    ["b23", "🟢", "Core Woche", "Das Core Ziel in einer Woche geschafft.", CS.best >= 1],
+    ["b24", "🛡️", "Rumpf Serie", "4 Wochen in Folge mit dem Core Ziel.", CS.best >= 4]
   ].map(a => ({ id: a[0], i: a[1], t: a[2], d: a[3], on: !!a[4] }));
 }
 function num(v) { if (v === undefined || v === null || v === "") return NaN; return parseFloat(String(v).replace(",", ".")); }
@@ -254,7 +303,31 @@ function interp(pts, w) { for (let i = 1; i < pts.length; i++) { const a = pts[i
 /* ---------- UI Helfer ---------- */
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-let tab = "heute", openK = null, viewWeek = null, strengthEx = "kh_bank", progWeek = null;
+let tab = "heute", openK = null, viewWeek = null, strengthEx = "kh_bank", progWeek = null, coreFocus = null;
+let Z = { id: null, mode: "both", scale: 1 };
+function figBlock(id) {
+  const cue = FIG.cue(id) || ["", ""];
+  const name = EXD[id] ? EXD[id].name : id;
+  return `<div class="figwrap"><button type="button" class="figbtn" data-zoom="${id}" aria-label="Abbildung vergrößern, ${esc(name)}">${FIG.illustration(id)}</button><div class="cued"><div><b>Start</b> ${esc(cue[0])}</div><div><b>Ende</b> ${esc(cue[1])}</div></div><div class="legend"><i></i>Rot zeigt den Zielmuskel. Tippen vergrößert.</div></div>`;
+}
+function openZoom(id, mode) {
+  Z = { id, mode: mode || "both", scale: 1 };
+  paintZoom();
+  $("#zoom").classList.add("on");
+  document.body.style.overflow = "hidden";
+}
+function paintZoom() {
+  const stage = $("#zstage"); if (!stage || !Z.id) return;
+  stage.innerHTML = FIG.illustration(Z.id, Z.mode);
+  const cue = FIG.cue(Z.id) || ["", ""];
+  $("#zcues").innerHTML = `<div><b>Start</b> ${esc(cue[0])}</div><div><b>Ende</b> ${esc(cue[1])}</div>`;
+  const svg = stage.querySelector("svg");
+  if (svg) svg.style.transform = "scale(" + Z.scale + ")";
+  $("#zboth").classList.toggle("on", Z.mode === "both");
+  $("#zstart").classList.toggle("on", Z.mode === "start");
+  $("#zend").classList.toggle("on", Z.mode === "end");
+}
+function closeZoom() { $("#zoom").classList.remove("on"); document.body.style.overflow = ""; }
 function toast(t) { const el = $("#toast"); el.textContent = t; el.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove("on"), 2600); }
 function lastSets(id, beforeK) { // letzte Einheit mit dieser Uebung vor beforeK
   const se = beforeK ? sess(...beforeK.split(":").map(Number)) : null;
@@ -282,16 +355,109 @@ function celebrateCheck() {
   if (X.lvl > (S.lvl || 1)) { msg = (msg ? msg + " · " : "") + "Level " + X.lvl + ": " + X.name; big = true; }
   S.lvl = Math.max(S.lvl || 1, X.lvl);
   for (let w = 1; w <= TOTAL; w++) if (okWeek(w) && !S.okSeen.includes(w)) { S.okSeen.push(w); msg = msg || ("Woche " + w + " zählt für den Streak! +" + XP.week + " XP"); big = big || false; confetti(false); }
+  if (!Array.isArray(S.coreSeen)) S.coreSeen = [];
+  for (let w = 1; w <= TOTAL; w++) if (coreOk(w) && S.coreSeen.indexOf(w) < 0) { S.coreSeen.push(w); msg = msg || ("Core Woche " + w + " geschafft! +" + XP.coreWeek + " XP"); confetti(false); }
   if (msg) { confetti(big); toast(msg); }
   save();
+  return msg;
 }
 
 /* ---------- Pausentimer ---------- */
-let T = { end: 0, len: 0, iv: null }, AC = null;
+let T = { end: 0, dur: 0, left: 0, run: false, info: "", iv: null }, AC = null, wakeSentinel = null;
 function beep() { try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); const o = AC.createOscillator(), g = AC.createGain(); o.frequency.value = 880; o.connect(g); g.connect(AC.destination); g.gain.setValueAtTime(.25, AC.currentTime); g.gain.exponentialRampToValueAtTime(.001, AC.currentTime + .6); o.start(); o.stop(AC.currentTime + .6); } catch (e) { } if (navigator.vibrate) navigator.vibrate([200, 100, 200]); }
-function startTimer(sec) { try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { } T.len = sec; T.end = Date.now() + sec * 1000; clearInterval(T.iv); T.iv = setInterval(tick, 250); tick(); $("#timer").classList.add("on"); }
-function tick() { const r = Math.max(0, Math.round((T.end - Date.now()) / 1000)); $("#tt").textContent = Math.floor(r / 60) + ":" + String(r % 60).padStart(2, "0"); $("#tb").style.width = (100 * (1 - r / T.len)) + "%";
-  if (r <= 0) { clearInterval(T.iv); $("#tt").textContent = "Los!"; $("#tl").textContent = "Pause vorbei, nächster Satz"; beep(); setTimeout(() => $("#timer").classList.remove("on"), 4000); } else $("#tl").textContent = "Pause, durchatmen"; }
+function lockWake() {
+  try {
+    if (!navigator.wakeLock || !navigator.wakeLock.request) return;
+    const p = navigator.wakeLock.request("screen");
+    if (p && typeof p.then === "function") p.then(s => { wakeSentinel = s; }).catch(() => { });
+  } catch (e) { }
+}
+function unlockWake() {
+  try {
+    if (!wakeSentinel) return;
+    const s = wakeSentinel; wakeSentinel = null;
+    const p = s.release && s.release();
+    if (p && p.catch) p.catch(() => { });
+  } catch (e) { }
+}
+function timerInfo(k, id, j) {
+  const se = sess(...k.split(":").map(Number));
+  if (!se) return "";
+  const idx = UNITS[se.unit].findIndex(u => u.id === id);
+  const n = idx >= 0 ? setsFor(se.w, se.s, idx, se.unit) : 0;
+  const name = EXD[id] ? EXD[id].name : "";
+  return "Satz " + (j + 1) + (n ? " von " + n : "") + (name ? ", " + name : "");
+}
+function showRemain(sec) {
+  const el = $("#tt"); if (!el) return;
+  if ($("#timer").classList.contains("satz")) el.textContent = "Los";
+  else el.textContent = Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0");
+  const dur = T.dur || 1;
+  const bar = $("#tb"); if (bar) bar.style.width = Math.max(0, Math.min(100, 100 * (1 - sec / dur))) + "%";
+}
+function paintTimer() {
+  const sec = $("#timer").classList.contains("satz") ? 0 : (T.run ? Math.max(0, Math.round((T.end - Date.now()) / 1000)) : Math.max(0, Math.round((T.left || 0) / 1000)));
+  showRemain(sec);
+  const sub = $("#tsub"); if (sub) sub.textContent = $("#timer").classList.contains("satz") ? "Nächster Satz" : (T.info || "");
+}
+function closeTimer() {
+  clearInterval(T.iv); T.iv = null; T.run = false;
+  const el = $("#timer"); el.classList.remove("on", "full", "satz", "paused");
+  const f = $("#tfull"); if (f) f.textContent = "Vollbild";
+  unlockWake();
+}
+function finishTimer() {
+  T.run = false; T.left = 0; clearInterval(T.iv); T.iv = null;
+  const el = $("#timer"); el.classList.add("satz"); el.classList.remove("paused");
+  $("#tl").textContent = "SATZ"; $("#tt").textContent = "Los";
+  const sub = $("#tsub"); if (sub) sub.textContent = "Nächster Satz";
+  const bar = $("#tb"); if (bar) bar.style.width = "100%";
+  beep();
+}
+function tick() {
+  if (!T.run) return;
+  const sec = Math.max(0, Math.round((T.end - Date.now()) / 1000));
+  showRemain(sec);
+  if (sec <= 0) finishTimer();
+}
+function startTimer(sec, info) {
+  try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { }
+  T.dur = sec; T.left = sec * 1000; T.info = info || ""; T.run = true; T.end = Date.now() + sec * 1000;
+  clearInterval(T.iv);
+  const el = $("#timer"); el.classList.add("on"); el.classList.remove("satz", "paused");
+  $("#tl").textContent = "PAUSE";
+  const f = $("#tfull"); if (f && !el.classList.contains("full")) f.textContent = "Vollbild";
+  paintTimer();
+  T.iv = setInterval(tick, 200);
+  lockWake();
+}
+function pauseTimer() {
+  if (!$("#timer").classList.contains("on") || !T.run) return;
+  T.left = Math.max(0, T.end - Date.now()); T.run = false; clearInterval(T.iv); T.iv = null;
+  $("#timer").classList.add("paused"); $("#tl").textContent = "PAUSE"; paintTimer();
+}
+function resumeTimer() {
+  if (!$("#timer").classList.contains("on")) return;
+  if ($("#timer").classList.contains("satz")) { startTimer(T.dur || 60, T.info); return; }
+  if (T.run) return;
+  const left = T.left > 0 ? T.left : (T.dur || 60) * 1000;
+  T.end = Date.now() + left; T.run = true;
+  $("#timer").classList.remove("paused", "satz"); $("#tl").textContent = "PAUSE";
+  clearInterval(T.iv); T.iv = setInterval(tick, 200); paintTimer(); lockWake();
+}
+function skipTimer() {
+  if (!$("#timer").classList.contains("on")) return;
+  if ($("#timer").classList.contains("satz")) { closeTimer(); return; }
+  finishTimer();
+}
+function addTimer(ms) {
+  if (!$("#timer").classList.contains("on")) return;
+  if ($("#timer").classList.contains("satz")) { startTimer(15, T.info); return; }
+  T.dur += 15;
+  if (T.run) T.end += ms; else T.left = (T.left || 0) + ms;
+  paintTimer();
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && $("#timer").classList.contains("on")) lockWake(); });
 
 /* ---------- Render ---------- */
 function header() {
@@ -328,12 +494,14 @@ function vHeute() {
     ${unitBadge(cur ? cur.unit : next ? next.unit : "A")}</div>
     ${NOTES[w] ? `<div class="note">${esc(NOTES[w])}</div>` : ""}<div class="quote">„${esc(SPRUECHE[w - 1])}“</div></div>`;
   }
+  h += coreBar();
   // Einheiten der Woche
   const wsel = sel.w;
   h += `<div class="card"><h2>Einheiten Woche ${wsel}</h2><div class="grid3">` + weekSess(wsel).map(x => `<button class="btn ${x.k === sel.k ? "" : "sec"}" data-open="${x.k}" style="flex-direction:column;gap:0;padding:8px 4px">
     <span style="font-size:13px">${fmtL(x.date)}</span><span>${unitName(x.unit).replace("Einheit ", "")}${isDone(x.w, x.s) ? " ✅" : ""}</span></button>`).join("") + `</div>
     <div class="row sp" style="margin-top:8px"><button class="btn sec" data-wk="${Math.max(1, wsel - 1)}">◀ Woche</button><span class="sm mu">${fmt(wDate(wsel, 0))} bis ${fmt(wDate(wsel, 6))}</span><button class="btn sec" data-wk="${Math.min(TOTAL, wsel + 1)}">Woche ▶</button></div></div>`;
   h += vSession(sel);
+  h += vCore();
   h += vActs(Math.min(TOTAL, Math.max(1, w0 < 1 ? 1 : w0)), t);
   return h;
 }
@@ -349,9 +517,10 @@ function vSession(se) {
     const lastTxt = last ? "Letztes Mal (" + fmt(last.date) + "): " + last.sets.map(x => (x.kg ? f1(x.kg, x.kg % 1 ? 1 : 0) + " kg × " : "") + x.r).join(", ") : "Noch kein Eintrag, starte leicht und sauber.";
     const lastTop = last ? Math.max(0, ...last.sets.map(x => x.kg || 0)) : 0, raised = cur.some(x => x && x.done && x.kg > lastTop);
     const hint = u === "H" || raised ? null : progressHint(def.id, last && last.sets, n), hintNow = u === "H" ? null : progressHint(def.id, cur.filter(x => x && x.done), n);
-    h += `<div class="ex"><div class="exh" data-guide="${def.id}"><img class="thumb" src="${IMG[def.id]}" alt=""><div><div class="exn">${i + 1}. ${esc(e.name)}</div>
+    h += `<div class="ex"><div class="exh" data-guide="${def.id}"><div class="exn">${i + 1}. ${esc(e.name)}</div>
       <div class="row wrapc" style="gap:4px;margin-top:4px"><span class="chip">${n} × ${esc(e.wdh)}</span><span class="chip">Pause ${esc(e.pause)}</span><span class="chip b">Anleitung ›</span></div>
-      ${e.ersatz ? `<div class="xs mu" style="margin-top:4px">Ersatz: ${esc(e.ersatz)}</div>` : ""}</div></div>
+      ${e.ersatz ? `<div class="xs mu" style="margin-top:4px">Ersatz: ${esc(e.ersatz)}</div>` : ""}</div>
+      ${figBlock(def.id)}
       <div class="last">${esc(lastTxt)}</div>${hint ? `<div class="hint g">⬆️ ${esc(hint.t)}</div>` : ""}<div class="sets">`;
     const rows = Math.max(n, cur.length);
     for (let j = 0; j < rows; j++) {
@@ -368,6 +537,35 @@ function vSession(se) {
   return h;
 }
 function tickRow(key, label, sub, on) { return `<div class="tick" data-act="${key}"><span class="box ${on ? "on" : ""}">${on ? "✓" : ""}</span><div><div style="font-weight:600">${label}</div><div class="xs mu">${sub}</div></div></div>`; }
+function coreBar() {
+  const sl = todaySlot(), n = coreCount(sl.w), goal = coreGoal(sl.w), done = act(sl.w, "co" + sl.d);
+  return `<div class="corebar"><div><b>Core ${n}/${goal}</b><div class="sm">${done ? "Heute erledigt, +20 XP" : "Heute noch offen, +20 XP"}</div></div><button class="btn" data-act="${sl.w}:co${sl.d}">${done ? "Doch nicht" : "+20 XP"}</button></div>`;
+}
+function vCore() {
+  const sl = todaySlot(), w = sl.w, d = sl.d, n = coreCount(w), goal = coreGoal(w), stretch = coreStretchN(w);
+  const done = act(w, "co" + d), bag = (S.core && S.core[w + ":" + d]) || {}, CS = coreStreaks();
+  const focus = coreFocus && CORE.some(c => c.id === coreFocus) ? coreFocus : (CORE.find(c => !bag[c.id]) || CORE[0]).id;
+  const cur = CORE.find(c => c.id === focus) || CORE[0];
+  const bonus = n >= goal, extra = n >= stretch;
+  let h = `<div class="card" id="corecard"><h2>Core Training</h2>
+  <div class="sm">5 bis 10 Minuten. Zu Hause oder nach dem Training.</div>
+  <div class="kpi" style="margin-top:10px"><div><b>+20</b><span>XP pro Tag</span></div><div><b>${n}/${goal}</b><span>Tage diese Woche</span></div><div><b>+50</b><span>${bonus ? "Bonus da" : "Wochenbonus"}</span></div></div>
+  <div class="prog coreprog" style="margin-top:10px"><i style="width:${Math.round(100 * Math.min(7, n) / 7)}%"></i><em style="left:${(100 * goal / 7)}%"></em></div>
+  <div class="sm" style="margin-top:6px">${n} von 7 Tagen. Ziel ${goal}${stretch > goal ? ", extra ab " + stretch : ""}. ${bonus ? "Wochenbonus +50 XP ist da." : "Wochenbonus +50 XP ab dem Ziel."}${extra ? " Extra +20 XP ist da." : ""}</div>
+  <button class="btn full" style="margin-top:10px" data-act="${w}:co${d}">${done ? "Heute erledigt, tippen zum Zurücknehmen" : "Core heute geschafft, +20 XP"}</button>
+  <div class="sm" style="margin-top:12px;font-weight:800">Diese Woche</div>
+  <div class="days">${DAYN.map((name, i) => `<button class="${act(w, "co" + i) ? "on" : ""}" data-act="${w}:co${i}">${name}</button>`).join("")}</div>
+  <div class="xs mu" style="margin-top:6px">Woche 1: 2 Tage reichen. Ab Woche 2 sind 4 das Ziel und 5 ein Extra.${CS.streak ? " Core Serie: " + CS.streak + (CS.streak === 1 ? " Woche." : " Wochen.") : ""}</div>
+  <div class="sm" style="margin-top:12px;font-weight:800">${esc(EXD[cur.id].name)}</div>
+  <div class="xs mu">${esc(cur.reps)}</div>
+  ${figBlock(cur.id)}
+  <div class="corelist">`;
+  CORE.forEach((c, i) => {
+    const on = !!bag[c.id];
+    h += `<div class="core-ex ${c.id === focus ? "cur" : ""}"><button type="button" class="box ${on ? "on" : ""}" data-coreex="${c.id}" aria-label="${esc(EXD[c.id].name)} geschafft">${on ? "✓" : ""}</button><button type="button" class="core-name" data-coreshow="${c.id}"><b>${i + 1}. ${esc(EXD[c.id].name)}</b><span class="xs mu">${esc(c.reps)}</span></button></div>`;
+  });
+  return h + `</div></div>`;
+}
 function vActs(w, t) {
   const d = Math.min(6, Math.max(0, Math.round((t - wDate(w, 0)) / 864e5)));
   return `<div class="card"><h2>Heute und diese Woche</h2>
@@ -382,6 +580,7 @@ function vWoche() {
   const cw = weekOf(today()), st = stats();
   let h = `<div class="card"><h2>🔥 Streak</h2><div class="kpi"><div><b>${st.weekStreak}</b><span>Wochen in Folge</span></div><div><b>${st.sessStreak}</b><span>Einheiten in Folge</span></div><div><b>${st.total}/${PLAN_N}</b><span>Krafteinheiten</span></div></div>
    <div class="xs mu" style="margin-top:8px">Eine Woche zählt mit mindestens 2 Krafteinheiten. Woche 1 hat nur Freitag und Sonntag, beide müssen erledigt sein. Ab Woche 2 mindestens 2 von 3.</div>
+   <div class="xs mu" style="margin-top:4px">Core: ${coreCount(Math.min(TOTAL, Math.max(1, cw < 1 ? 1 : cw)))} von ${coreGoal(Math.min(TOTAL, Math.max(1, cw < 1 ? 1 : cw)))} Tagen. Serie ${coreStreaks().streak}.</div>
    <div class="prog" style="margin-top:10px"><i style="width:${Math.round(100 * Math.min(21, Math.max(0, cw)) / 21)}%"></i></div><div class="xs mu" style="margin-top:4px">Woche ${Math.max(0, Math.min(21, cw))} von 21</div></div>`;
   h += `<div class="card"><h2>Wochenübersicht 1 bis 21</h2>`;
   for (let w = 1; w <= TOTAL; w++) {
@@ -389,7 +588,7 @@ function vWoche() {
     h += `<div class="wk" data-wkopen="${w}"><span class="n ${okWeek(w) ? "ok" : ""} ${w === cw ? "cur" : ""}">${w}</span>
      <div><div class="sm" style="font-weight:600">${fmt(wDate(w, 0))} bis ${fmt(wDate(w, 6))} · ${phase(w)}${TRAVEL.includes(w) ? " 🧳" : ""}${HOLI.includes(w) ? " 🎄" : ""}${CHECKW.includes(w) ? " 📏" : ""}</div>
      ${NOTES[w] ? `<div class="xs mu">${esc(NOTES[w])}</div>` : ""}</div>
-     <div class="dots">${ws.map(x => `<span class="dot ${x.unit} ${isDone(x.w, x.s) || (x.unit === "H" && act(w, "hw")) ? "on" : ""}">${x.unit === "H" ? "H" : x.unit}</span>`).join("")}${act(w, "sw") ? "🏊" : ""}${act(w, "jo") ? "🏃" : ""}${TRAVEL.includes(w) && act(w, "hw") && !ws.some(x => x.unit === "H") ? "🧳" : ""}</div></div>`;
+     <div class="dots">${ws.map(x => `<span class="dot ${x.unit} ${isDone(x.w, x.s) || (x.unit === "H" && act(w, "hw")) ? "on" : ""}">${x.unit === "H" ? "H" : x.unit}</span>`).join("")}${coreCount(w) ? `<span class="dot C ${coreOk(w) ? "on" : ""}">${coreCount(w)}</span>` : ""}${act(w, "sw") ? "🏊" : ""}${act(w, "jo") ? "🏃" : ""}${TRAVEL.includes(w) && act(w, "hw") && !ws.some(x => x.unit === "H") ? "🧳" : ""}</div></div>`;
     if (viewWeek === w) h += vWeekDetail(w);
   }
   return h + `</div>`;
@@ -400,6 +599,7 @@ function vWeekDetail(w) {
   h += tickRow(w + ":sw", "Schwimmen", "Do", act(w, "sw")) + tickRow(w + ":jo", "Joggen", "locker", act(w, "jo")) + tickRow(w + ":hw", "Hotel Workout", "freiwillig, ersetzt keine Programmeinheit", act(w, "hw"));
   h += `<div class="sm" style="margin-top:8px">Schritte ${stepsGoal(w).toLocaleString("de-DE")} pro Tag</div><div class="days">` + DAYN.map((d, i) => `<button class="${act(w, "st" + i) ? "on" : ""}" data-act="${w}:st${i}">${d}</button>`).join("") + `</div>
    <div class="sm" style="margin-top:8px">Eiweiß 160 bis 190 g</div><div class="days">` + DAYN.map((d, i) => `<button class="${act(w, "pr" + i) ? "on" : ""}" data-act="${w}:pr${i}">${d}</button>`).join("") + `</div>
+   <div class="sm" style="margin-top:8px">Core Training, ${XP.core} XP pro Tag, Ziel ${coreGoal(w)}</div><div class="days">` + DAYN.map((d, i) => `<button class="${act(w, "co" + i) ? "on" : ""}" data-act="${w}:co${i}">${d}</button>`).join("") + `</div>
    <button class="btn sec full" style="margin-top:10px" data-gow="${w}">Einheiten dieser Woche öffnen</button></div>`;
   return h;
 }
@@ -446,15 +646,18 @@ function vFort() {
 }
 function vErfolge() {
   const X = xpInfo(), B = badges(), st = stats(), R = records(), on = B.filter(b => b.on).length;
-  const names = { set: "Sätze", session: "Einheiten", hotel: "Hotel Workouts", swim: "Schwimmen", jog: "Joggen", steps: "Schrittziel Tage", prot: "Eiweiß Tage", kg: "Gewicht eingetragen", bf: "Körperfett eingetragen", pr: "Bestleistungen", week: "Streak Wochen" };
+  const names = { set: "Sätze", session: "Einheiten", hotel: "Hotel Workouts", swim: "Schwimmen", jog: "Joggen", steps: "Schrittziel Tage", prot: "Eiweiß Tage", kg: "Gewicht eingetragen", bf: "Körperfett eingetragen", pr: "Bestleistungen", week: "Streak Wochen", core: "Core Tage", coreWeek: "Core Wochen", coreStretch: "Core Extra" };
+  const CS = coreStreaks();
   let h = `<div class="card hero"><div class="sm mu">Dein Level</div><div class="big">Level ${X.lvl}: ${esc(X.name)}</div><div class="prog" style="margin-top:8px"><i style="width:${Math.round(X.pct * 100)}%"></i></div>
    <div class="sm" style="margin-top:4px">${X.xp} XP${X.nxt > X.cur ? " · nächstes Level bei " + X.nxt + " XP (" + esc(LEVELS[X.lvl][1]) + ")" : " · Maximallevel!"}</div></div>`;
-  h += `<div class="card"><h2>🔥 Streaks</h2><div class="kpi"><div><b>${st.weekStreak}</b><span>Wochen aktuell</span></div><div><b>${st.bestWeek}</b><span>beste Serie</span></div><div><b>${st.sessStreak}</b><span>Einheiten in Folge</span></div></div></div>`;
+  h += `<div class="card"><h2>🔥 Streaks</h2><div class="kpi"><div><b>${st.weekStreak}</b><span>Wochen aktuell</span></div><div><b>${st.bestWeek}</b><span>beste Serie</span></div><div><b>${st.sessStreak}</b><span>Einheiten in Folge</span></div></div>
+  <div class="kpi" style="margin-top:8px"><div><b>${CS.streak}</b><span>Core Serie</span></div><div><b>${CS.best}</b><span>beste Core Serie</span></div><div><b>${CS.days}</b><span>Core Tage</span></div></div>
+  <div class="xs mu" style="margin-top:8px">Core: 20 XP pro Tag. 50 XP, wenn das Wochenziel steht. 20 XP extra am fünften Tag, in Woche 1 am dritten.</div></div>`;
   h += `<div class="card"><h2>🏅 Abzeichen ${on} von ${B.length}</h2><div class="badges">${B.map(b => `<div class="bd ${b.on ? "on" : ""}"><div class="i">${b.i}</div><b>${esc(b.t)}</b><span class="xs mu">${esc(b.d)}</span></div>`).join("")}</div></div>`;
   const bl = Object.keys(R.best);
   h += `<div class="card"><h2>🏆 Persönliche Rekorde</h2>${bl.length ? `<table><tr><th>Übung</th><th>Bester Satz</th><th>Datum</th></tr>${bl.map(id => `<tr><td>${esc(EXD[id].name)}</td><td>${f1(R.best[id].kg, R.best[id].kg % 1 ? 1 : 0)} kg × ${R.best[id].r}</td><td>${fmt(R.best[id].date)}</td></tr>`).join("")}</table><div class="xs mu" style="margin-top:6px">${R.prs.length} neue Bestleistungen bisher (neues Höchstgewicht bei mindestens der unteren Wiederholungszahl).</div>` : '<div class="sm mu">Sobald du Sätze mit Gewicht einträgst, erscheinen hier deine Rekorde.</div>'}</div>`;
   h += `<div class="card"><h2>⚡ XP Herkunft</h2><table>${Object.keys(names).filter(k => X.parts[k]).map(k => `<tr><td>${names[k]}</td><td style="text-align:right">${X.parts[k]} XP</td></tr>`).join("") || '<tr><td class="mu">Noch keine XP. Erster Satz bringt 5 XP.</td></tr>'}</table>
-   <div class="xs mu" style="margin-top:6px">Satz ${XP.set}, Einheit ${XP.session}, Hotel Workout ${XP.hotel}, Schwimmen und Joggen je ${XP.swim}, Schritt und Eiweiß Tag je ${XP.steps}, Gewicht ${XP.kg}, Körperfett ${XP.bf}, Bestleistung ${XP.pr}, Streak Woche ${XP.week} XP.</div></div>`;
+   <div class="xs mu" style="margin-top:6px">Satz ${XP.set}, Einheit ${XP.session}, Hotel Workout ${XP.hotel}, Schwimmen und Joggen je ${XP.swim}, Schritt und Eiweiß Tag je ${XP.steps}, Gewicht ${XP.kg}, Körperfett ${XP.bf}, Bestleistung ${XP.pr}, Streak Woche ${XP.week}, Core Tag ${XP.core}, Core Woche ${XP.coreWeek}, Core Extra ${XP.coreStretch} XP.</div></div>`;
   return h;
 }
 function vMehr() {
@@ -471,7 +674,7 @@ function vMehr() {
   <div class="card"><h2>💾 Daten</h2><div class="sm mu">Alles bleibt auf diesem Gerät (localStorage). Exportiere regelmäßig als Sicherung, z.B. nach jedem Check.</div>
   <div class="grid2" style="margin-top:10px"><button class="btn sec" data-export>Exportieren</button><label class="btn sec">Importieren<input type="file" accept="application/json,.json" data-import style="display:none"></label></div>
   <button class="btn warn full" style="margin-top:8px" data-reset>Alle Daten zurücksetzen</button></div>
-  <div class="card"><h2>ℹ️ Über die App</h2><div class="sm">Franz Fitness v3 · Plan Woche 1 bis 21. Tag 1 ist Freitag 20.11.2026 mit Einheit A, Ende Sonntag 11.4.2027. Deload in Woche 12 vom 1.2. bis 7.2.2027. Körperfett in den Wochen 4, 8, 12, 16, 20 und 21. Offline, ohne Konto, ohne Tracker. Übungsbilder sind Illustrationen, keine Einweisung. Alle Zahlen sind Richtwerte, bei Beschwerden Arzt fragen.</div></div>` + historyCard();
+  <div class="card"><h2>ℹ️ Über die App</h2><div class="sm">Franz Fitness v4 · Plan Woche 1 bis 21. Tag 1 ist Freitag 20.11.2026 mit Einheit A, Ende Sonntag 11.4.2027. Deload in Woche 12 vom 1.2. bis 7.2.2027. Körperfett in den Wochen 4, 8, 12, 16, 20 und 21. Offline, ohne Konto, ohne Tracker. Übungsbilder sind eigene Skizzen mit rotem Zielmuskel, keine Einweisung. Core Training gibt Tagespunkte und einen Wochenbonus. Alle Zahlen sind Richtwerte, bei Beschwerden Arzt fragen.</div></div>` + historyCard();
 }
 function historyCard() {
   const a = S.archive;
@@ -495,25 +698,36 @@ function historyCard() {
 }
 function guide(id) {
   const e = EXD[id];
-  $("#sheet").innerHTML = `<div class="row sp" style="margin-bottom:8px"><h2 style="margin:0;font-size:19px">${esc(e.name)}</h2><button class="btn sec" data-close style="padding:6px 12px">✕</button></div>
-  <img src="${IMG[id]}" alt="${esc(e.name)}: Start und Ende"><div class="grid2 sm" style="margin-top:6px"><div><b>1 Start:</b> ${esc(e.start)}</div><div><b>2 Ende:</b> ${esc(e.ende)}</div></div>
+  if (!e) return;
+  $("#sheet").innerHTML = `<div class="row sp" style="margin-bottom:8px"><h2 style="margin:0;font-size:22px">${esc(e.name)}</h2><button class="btn sec" data-close style="padding:8px 14px;min-height:48px">Schließen</button></div>
+  ${figBlock(id)}
+  <div class="grid2 sm" style="margin-top:8px"><div><b>Start:</b> ${esc(e.start)}</div><div><b>Ende:</b> ${esc(e.ende)}</div></div>
   <div class="row wrapc" style="gap:4px;margin:10px 0"><span class="chip">${esc(e.plan)}</span><span class="chip">Sätze ${esc(e.saetze)}</span><span class="chip">${esc(e.wl || "Wdh.")} ${esc(e.wdh)}</span><span class="chip">Pause ${esc(e.pause)}</span><span class="chip g">RIR ${esc(e.rir)}</span></div>
   <h3>So geht's</h3>${e.punkte.map(p => `<div class="li"><span style="color:var(--te)">✓</span><span>${esc(p)}</span></div>`).join("")}
   <h3 style="margin-top:8px;color:var(--re)">Typische Fehler</h3>${e.fehler.map(p => `<div class="li"><span>⚠️</span><span>${esc(p)}</span></div>`).join("")}
-  <div class="hint" style="margin-top:10px">🎯 Zielmuskel: ${esc(e.ziel)}</div>${e.ersatz ? `<div class="hint">Ersatz, wenn der Platz belegt ist oder das Gerät fehlt: ${esc(e.ersatz)}</div>` : ""}${e.fb ? '<div class="xs mu" style="margin-top:6px">Bild: schematische Zeichnung.</div>' : ""}`;
+  <div class="hint" style="margin-top:10px">Zielmuskel: ${esc(e.ziel)}</div>${e.ersatz ? `<div class="hint">Ersatz, wenn der Platz belegt ist oder das Gerät fehlt: ${esc(e.ersatz)}</div>` : ""}<div class="xs mu" style="margin-top:6px">Eigene Skizze, keine Einweisung.</div>`;
   $("#modal").classList.add("on");
 }
 
 /* ---------- Events ---------- */
 function setLog(k, id, j, field, val) { S.logs[k] = S.logs[k] || {}; const a = S.logs[k][id] = S.logs[k][id] || []; a[j] = a[j] || {}; a[j][field] = val; }
 document.addEventListener("click", ev => {
-  const t = ev.target.closest("[data-tab],[data-open],[data-wk],[data-guide],[data-set],[data-add],[data-finish],[data-act],[data-wkopen],[data-gow],[data-pw],[data-we],[data-shift],[data-unshift],[data-export],[data-reset],[data-close],#tstop,#tplus,#modal");
+  const t = ev.target.closest("[data-tab],[data-open],[data-wk],[data-guide],[data-zoom],[data-set],[data-add],[data-finish],[data-act],[data-coreex],[data-coreshow],[data-wkopen],[data-gow],[data-pw],[data-we],[data-shift],[data-unshift],[data-export],[data-reset],[data-close],#tstop,#tplus,#tstart,#tskip,#tfull,#tclose,#zclose,#zin,#zout,#zboth,#zstart,#zend,#modal");
   if (!t) return;
   const d = t.dataset;
   if (t.id === "modal") { if (ev.target.id === "modal") $("#modal").classList.remove("on"); return; }
   if (d.close !== undefined) { $("#modal").classList.remove("on"); return; }
-  if (t.id === "tstop") { clearInterval(T.iv); $("#timer").classList.remove("on"); return; }
-  if (t.id === "tplus") { T.end += 15000; T.len += 15; return; }
+  if (t.id === "tclose") { closeTimer(); return; }
+  if (t.id === "tstop") { pauseTimer(); return; }
+  if (t.id === "tstart") { resumeTimer(); return; }
+  if (t.id === "tskip") { skipTimer(); return; }
+  if (t.id === "tplus") { addTimer(15000); return; }
+  if (t.id === "tfull") { const el = $("#timer"); el.classList.toggle("full"); t.textContent = el.classList.contains("full") ? "Zurück" : "Vollbild"; return; }
+  if (t.id === "zclose") { closeZoom(); return; }
+  if (t.id === "zin") { Z.scale = Math.min(4, +(Z.scale + 0.35).toFixed(2)); paintZoom(); return; }
+  if (t.id === "zout") { Z.scale = Math.max(1, +(Z.scale - 0.35).toFixed(2)); paintZoom(); return; }
+  if (t.id === "zboth" || t.id === "zstart" || t.id === "zend") { Z.mode = t.id === "zstart" ? "start" : t.id === "zend" ? "end" : "both"; Z.scale = 1; paintZoom(); return; }
+  if (d.zoom) { openZoom(d.zoom); return; }
   if (d.tab) { tab = d.tab; render(); scrollTo(0, 0); return; }
   if (d.open) { openK = d.open; render(); $("#sess").scrollIntoView({ behavior: "smooth" }); return; }
   if (d.wk) { openK = d.wk + ":0"; render(); return; }
@@ -531,17 +745,37 @@ document.addEventListener("click", ev => {
     a[jj] = { kg: isNaN(kg) ? null : kg, r, done: true, t: Date.now() };
     save(); const after = records().prs.length;
     if (after > before) { confetti(true); toast("🏆 Neue Bestleistung! +" + XP.pr + " XP"); } else toast(CHEERS[Math.floor(Math.random() * CHEERS.length)] + " +" + XP.set + " XP");
-    startTimer(+p); celebrateCheck(); render(); return;
+    startTimer(+p, timerInfo(k, id, jj)); celebrateCheck(); render(); return;
   }
   if (d.add) { const [k, id] = d.add.split("|"); S.logs[k] = S.logs[k] || {}; const a = S.logs[k][id] = S.logs[k][id] || []; const se = sess(...k.split(":").map(Number)); const idx = UNITS[se.unit].findIndex(u => u.id === id); const n = Math.max(a.length, setsFor(se.w, se.s, idx, se.unit)); a[n] = {}; save(); render(); return; }
   if (d.finish) { const [w, s] = d.finish.split(":").map(Number), se = sess(w, s);
     if (!se) return;
     if (S.done[d.finish]) { delete S.done[d.finish]; if (se.unit === "H") S.act[w + ":hw"] = false; save(); render(); return; }
     S.done[d.finish] = Date.now(); if (se.unit === "H") S.act[w + ":hw"] = true; save(); confetti(false); toast(se.unit === "H" ? "Hotel Held! +" + XP.hotel + " XP" : "Einheit geschafft! +" + XP.session + " XP"); celebrateCheck(); render(); return; }
+  if (d.coreex || d.coreshow) {
+    const sl = todaySlot(), key = sl.w + ":" + sl.d;
+    if (d.coreshow) coreFocus = d.coreshow;
+    if (d.coreex) {
+      S.core[key] = Object.assign({}, S.core[key] || {});
+      if (S.core[key][d.coreex]) delete S.core[key][d.coreex]; else S.core[key][d.coreex] = true;
+      coreFocus = d.coreex;
+      save();
+    }
+    render();
+    const card = $("#corecard"); if (card) card.scrollIntoView({ block: "nearest" });
+    return;
+  }
   if (d.act) { const key = d.act;
-    if (key.startsWith("done:")) { const k = key.slice(5), [w, s] = k.split(":").map(Number); if (S.done[k]) delete S.done[k]; else S.done[k] = Date.now(); if (sess(w, s).unit === "H") S.act[w + ":hw"] = !!S.done[k]; }
+    if (key.startsWith("done:")) { const k = key.slice(5), [w, s] = k.split(":").map(Number); if (S.done[k]) delete S.done[k]; else S.done[k] = Date.now(); if (sess(w, s) && sess(w, s).unit === "H") S.act[w + ":hw"] = !!S.done[k]; }
     else S.act[key] = !S.act[key];
-    save(); if (S.act[key] || key.startsWith("done:")) celebrateCheck(); render(); return; }
+    save();
+    const coreDay = /^\d+:co\d$/.test(key);
+    if (coreDay && !S.act[key]) { toast("Core Tag zurückgenommen"); render(); return; }
+    if (S.act[key] || key.startsWith("done:")) {
+      const big = celebrateCheck();
+      if (coreDay && S.act[key] && !big) { confetti(false); toast("Core geschafft! +" + XP.core + " XP"); }
+    }
+    render(); return; }
   if (d.wkopen) { const w = +d.wkopen; viewWeek = viewWeek === w ? null : w; render(); return; }
   if (d.pw !== undefined) { progWeek = +d.pw; render(); return; }
   if (d.we) { S.set.we = d.we; save(); render(); toast("Dritte Einheit: " + (d.we === "sa" ? "Samstag" : "Sonntag")); return; }
@@ -555,10 +789,10 @@ document.addEventListener("change", ev => {
   if (d.in) { const [k, id, j, f] = d.in.split("|"); const v = f === "kg" ? num(t.value) : parseInt(t.value, 10); setLog(k, id, +j, f, isNaN(v) ? null : v); save(); return; }
   if (d.meas) { const v = t.value.trim().replace(".", ","); if (v === "") delete S.meas[d.meas]; else if (isNaN(num(v))) { toast("Bitte eine Zahl eingeben"); return; } else S.meas[d.meas] = v; save(); celebrateCheck(); render(); toast("Gespeichert"); return; }
   if (d.sx !== undefined) { strengthEx = t.value; render(); return; }
-  if (d.import !== undefined && t.files[0]) { const r = new FileReader(); r.onload = () => { try { const p = JSON.parse(r.result); if (!p || p.v !== 1 || !p.logs) throw 0; if (confirm("Import ersetzt die aktuellen Daten auf diesem Gerät. Fortfahren?")) { S = Object.assign(blank(), p); S.set = Object.assign({ we: "sa", shift: {} }, p.set || {}); if (!p.cal) delete S.cal; migrate(); save(); render(); toast("Import erfolgreich"); } } catch (e) { toast("Datei ist kein Franz Fitness Export"); } }; r.readAsText(t.files[0]); t.value = ""; }
+  if (d.import !== undefined && t.files[0]) { const r = new FileReader(); r.onload = () => { try { const p = JSON.parse(r.result); if (!p || p.v !== 1 || !p.logs) throw 0; if (confirm("Import ersetzt die aktuellen Daten auf diesem Gerät. Fortfahren?")) { S = Object.assign(blank(), p); S.set = Object.assign({ we: "sa", shift: {} }, p.set || {}); if (!p.cal) delete S.cal; migrate(); ensureShape(); save(); render(); toast("Import erfolgreich"); } } catch (e) { toast("Datei ist kein Franz Fitness Export"); } }; r.readAsText(t.files[0]); t.value = ""; }
 });
 function exportData() {
-  const name = "franz-fitness-" + new Date().toISOString().slice(0, 10) + ".json", blob = new Blob([JSON.stringify(Object.assign({ exportiert: new Date().toISOString(), app: "Franz Fitness v3" }, S), null, 1)], { type: "application/json" });
+  const name = "franz-fitness-" + new Date().toISOString().slice(0, 10) + ".json", blob = new Blob([JSON.stringify(Object.assign({ exportiert: new Date().toISOString(), app: "Franz Fitness v4" }, S), null, 1)], { type: "application/json" });
   try { const f = new File([blob], name, { type: "application/json" }); if (navigator.canShare && navigator.canShare({ files: [f] })) { navigator.share({ files: [f], title: "Franz Fitness Export" }).catch(() => dl(blob, name)); return; } } catch (e) { }
   dl(blob, name);
 }
@@ -572,4 +806,25 @@ if (/^https?:/.test(location.protocol)) {
   const l = document.createElement("link"); l.rel = "manifest"; l.href = "manifest.json"; document.head.appendChild(l);
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => { });
 }
-window.FF = { S: () => S, stats, xpInfo, badges, records, okWeek, kraftCount, sess, setsFor, save, load, render };
+window.FIG = FIG;
+window.FF = { S: () => S, stats, xpInfo, badges, records, okWeek, kraftCount, sess, setsFor, save, load, render, coreCount, coreGoal, coreOk, hasFig: id => FIG.has(id), exerciseIds: () => EXDATA.map(e => e.id) };
+(function () {
+  const stage = $("#zstage"); if (!stage) return;
+  let pinch = null;
+  const dist = ts => Math.hypot(ts[0].clientX - ts[1].clientX, ts[0].clientY - ts[1].clientY) || 1;
+  stage.addEventListener("touchstart", ev => { if (ev.touches.length === 2) pinch = { d: dist(ev.touches), s: Z.scale }; }, { passive: true });
+  stage.addEventListener("touchmove", ev => {
+    if (ev.touches.length === 2 && pinch) {
+      ev.preventDefault();
+      Z.scale = Math.min(4, Math.max(1, pinch.s * dist(ev.touches) / pinch.d));
+      const svg = stage.querySelector("svg"); if (svg) svg.style.transform = "scale(" + Z.scale + ")";
+    }
+  }, { passive: false });
+  stage.addEventListener("touchend", () => { pinch = null; });
+  stage.addEventListener("wheel", ev => {
+    if (!$("#zoom").classList.contains("on")) return;
+    ev.preventDefault();
+    Z.scale = Math.min(4, Math.max(1, Z.scale + (ev.deltaY < 0 ? 0.12 : -0.12)));
+    const svg = stage.querySelector("svg"); if (svg) svg.style.transform = "scale(" + Z.scale + ")";
+  }, { passive: false });
+})();

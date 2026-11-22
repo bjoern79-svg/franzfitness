@@ -16,7 +16,40 @@
 </head>
 <body>
 <div class="wrap" id="app"></div>
-<div class="timer" id="timer"><span class="t" id="tt">1:30</span><div style="flex:1"><div class="xs mu" id="tl">Pause</div><div class="bar"><i id="tb"></i></div></div><button class="btn sec" id="tplus" style="padding:8px 10px">+15 s</button><button class="btn sec" id="tstop" style="padding:8px 10px">✕</button></div>
+<div class="timer" id="timer" role="dialog" aria-label="Pausentimer">
+  <div class="timer-in">
+    <div class="timer-top">
+      <div class="timer-state" id="tl">PAUSE</div>
+      <button type="button" class="timer-x" id="tclose">Schließen</button>
+    </div>
+    <div class="timer-num" id="tt">1:30</div>
+    <div class="timer-sub" id="tsub"></div>
+    <div class="bar bigbar"><i id="tb"></i></div>
+    <div class="timer-actions">
+      <button type="button" class="timer-btn" id="tstart">Start</button>
+      <button type="button" class="timer-btn" id="tstop">Stopp</button>
+      <button type="button" class="timer-btn go" id="tskip">Weiter</button>
+    </div>
+    <div class="timer-actions">
+      <button type="button" class="timer-btn" id="tplus">+15 s</button>
+      <button type="button" class="timer-btn" id="tfull">Vollbild</button>
+    </div>
+  </div>
+</div>
+<div class="zoom" id="zoom" role="dialog" aria-label="Abbildung groß">
+  <div class="zoombar">
+    <button type="button" id="zboth">Beide</button>
+    <button type="button" id="zstart">Nur Start</button>
+    <button type="button" id="zend">Nur Ende</button>
+  </div>
+  <div class="zoombar">
+    <button type="button" id="zout">Kleiner</button>
+    <button type="button" id="zin">Größer</button>
+    <button type="button" id="zclose">Schließen</button>
+  </div>
+  <div class="zstage" id="zstage"></div>
+  <div class="zcues" id="zcues"></div>
+</div>
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
 <div class="toast" id="toast"></div>
 <canvas id="fx"></canvas>

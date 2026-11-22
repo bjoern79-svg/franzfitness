@@ -37,14 +37,32 @@ with sync_playwright() as p:
     st = pg.evaluate("JSON.parse(localStorage.getItem('franz-fitness-app-v1'))")
     ok("Satz gespeichert unter altem Schlüssel", st["logs"]["1:0"]["kh_bank"][0]["kg"] == 20 and st["logs"]["1:0"]["kh_bank"][0]["done"] is True)
     ok("Pausentimer läuft", "on" in pg.get_attribute("#timer", "class"), pg.inner_text("#tt"))
+    ok("Timer zeigt Pause", pg.inner_text("#tl").strip() == "PAUSE")
+    num_px = pg.evaluate("() => parseFloat(getComputedStyle(document.querySelector('#tt')).fontSize)")
+    ok("Timer Zahl füllt die Breite", num_px >= 90, str(num_px))
+    ok("Timer Knöpfe Start Stopp Weiter", all(x in pg.inner_text("#timer") for x in ("Start", "Stopp", "Weiter")))
     ok("XP für Satz", pg.evaluate("FF.xpInfo().xp") == 5, str(pg.evaluate("FF.xpInfo().xp")))
+    pg.locator('[data-act="1:co4"]').first.click()
+    pg.wait_for_timeout(200)
+    ok("Core Tag gibt 20 XP", pg.evaluate("FF.xpInfo().xp") == 25, str(pg.evaluate("FF.xpInfo().xp")))
+    ok("Core Karte ohne Gedankenstrich", "–" not in pg.inner_text("#corecard") and "—" not in pg.inner_text("#corecard") and "Core Training" in pg.inner_text("#corecard"))
+    bonus = pg.evaluate("""() => {
+      const s = FF.S();
+      s.act['1:co5'] = true;
+      const zwei = FF.xpInfo().xp;
+      s.act['1:co6'] = true;
+      return {zwei, drei: FF.xpInfo().xp, goal: FF.coreGoal(1)};
+    }""")
+    ok("Core Woche 1: Bonus ab 2 Tagen, Extra am dritten", bonus["goal"] == 2 and bonus["zwei"] == 95 and bonus["drei"] == 135, str(bonus))
     pg.reload()
     pg.wait_for_timeout(500)
     ok("Neuladen behält Gewicht", pg.input_value('[data-in="1:0|kh_bank|0|kg"]') == "20")
     pg.click('[data-guide="kh_bank"]')
     pg.wait_for_timeout(200)
     sheet = pg.inner_text("#sheet")
-    ok("Anleitung mit Bild und Ersatz", "Typische Fehler" in sheet and "Insignia Series Chest Press" in sheet and pg.locator("#sheet img").count() == 1)
+    ok("Anleitung mit Bild und Ersatz", "Typische Fehler" in sheet and "Insignia Series Chest Press" in sheet and pg.locator("#sheet svg.fig").count() == 1)
+    ok("Anleitung groß und mit Stichwort", "An der Brust" in sheet and "Rot zeigt den Zielmuskel" in sheet)
+    ok("Jede Übung hat eine eigene Skizze", pg.evaluate("() => FF.exerciseIds().every(id => FF.hasFig(id))"))
     pg.click("[data-close]")
     ok("Woche 1 Freitag und Sonntag", pg.evaluate("""() => {
       const a = FF.sess(1,0), b = FF.sess(1,1);

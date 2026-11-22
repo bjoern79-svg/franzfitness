@@ -45,9 +45,39 @@
   "2:00"
  ],
  [
+  "Timer zeigt Pause",
+  true,
+  ""
+ ],
+ [
+  "Timer Zahl füllt die Breite",
+  true,
+  "120.9"
+ ],
+ [
+  "Timer Knöpfe Start Stopp Weiter",
+  true,
+  ""
+ ],
+ [
   "XP für Satz",
   true,
   "5"
+ ],
+ [
+  "Core Tag gibt 20 XP",
+  true,
+  "25"
+ ],
+ [
+  "Core Karte ohne Gedankenstrich",
+  true,
+  ""
+ ],
+ [
+  "Core Woche 1: Bonus ab 2 Tagen, Extra am dritten",
+  true,
+  "{'zwei': 95, 'drei': 135, 'goal': 2}"
  ],
  [
   "Neuladen behält Gewicht",
@@ -56,6 +86,16 @@
  ],
  [
   "Anleitung mit Bild und Ersatz",
+  true,
+  ""
+ ],
+ [
+  "Anleitung groß und mit Stichwort",
+  true,
+  ""
+ ],
+ [
+  "Jede Übung hat eine eigene Skizze",
   true,
   ""
  ],
