@@ -305,10 +305,50 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 let tab = "heute", openK = null, viewWeek = null, strengthEx = "kh_bank", progWeek = null, coreFocus = null;
 let Z = { id: null, mode: "both", scale: 1 };
-function figBlock(id) {
-  const cue = FIG.cue(id) || ["", ""];
+const CUE = {
+  kh_bank: ["An der Brust", "Nach oben drücken"],
+  hs_schraeg: ["Griffe an der Brust", "Nach oben drücken"],
+  latzug: ["Arme lang oben", "Stange zur Brust"],
+  kh_rudern: ["Arm hängt lang", "Hantel zur Hüfte"],
+  goblet: ["Hantel vor der Brust", "Tief in die Knie"],
+  bizeps: ["Arme hängen lang", "Hoch zur Schulter"],
+  trizeps_seil: ["Unterarme oben", "Nach unten strecken"],
+  schraegbank: ["An der oberen Brust", "Schräg nach oben"],
+  fliegende: ["Arme weit offen", "Vor der Brust"],
+  rudern: ["Arme lang nach vorn", "Griffe an die Hüfte"],
+  seitheben: ["Hanteln an den Seiten", "Bis auf Schulterhöhe"],
+  rdl: ["Aufrecht, Hanteln vorn", "Hüfte nach hinten"],
+  hammer: ["Daumen nach oben", "Hoch zur Schulter"],
+  trizeps_strecker: ["Unterarme gebeugt", "Unterarme strecken"],
+  brustpresse: ["Griffe an der Brust", "Nach vorn drücken"],
+  multipresse: ["Stange an der Brust", "Nach oben drücken"],
+  deadbug: ["Arme und Beine oben", "Strecken im Wechsel"],
+  trizeps_ueberkopf: ["Hände hinter dem Kopf", "Arme nach oben"],
+  beinpresse: ["Knie gebeugt", "Beine strecken"],
+  hipthrust: ["Hüfte unten", "Hüfte nach oben"],
+  liegestuetz: ["Körper gerade", "Brust Richtung Boden"],
+  bandrudern: ["Arme lang nach vorn", "Hände an die Rippen"],
+  kniebeuge: ["Aufrecht stehen", "Tief in die Knie"],
+  plank: ["Auf den Knien", "Körper eine Linie"],
+  seitstutz: ["Auf dem Unterarm", "Hüfte hoch"],
+  birddog: ["Auf Händen und Knien", "Arm und Bein strecken"],
+  crunch: ["Schultern liegen", "Schultern anheben"],
+  revcrunch: ["Beine oben angewinkelt", "Hüfte anheben"],
+  pallof: ["Hände an der Brust", "Arme nach vorn"]
+};
+function hasFig(id) { return !!CUE[id]; }
+function figSrc(id) { return "illustrations/" + id + ".webp"; }
+function figPicture(id, mode) {
   const name = EXD[id] ? EXD[id].name : id;
-  return `<div class="figwrap"><button type="button" class="figbtn" data-zoom="${id}" aria-label="Abbildung vergrößern, ${esc(name)}">${FIG.illustration(id)}</button><div class="cued"><div><b>Start</b> ${esc(cue[0])}</div><div><b>Ende</b> ${esc(cue[1])}</div></div><div class="legend"><i></i>Rot zeigt den Zielmuskel. Tippen vergrößert.</div></div>`;
+  const alt = esc(name) + ", Start und Ende";
+  const img = `<img class="fig" src="${figSrc(id)}" alt="${alt}">`;
+  if (mode === "start" || mode === "end") return `<div class="crop ${mode}">${img}</div>`;
+  return img;
+}
+function figBlock(id) {
+  const cue = CUE[id] || ["", ""];
+  const name = EXD[id] ? EXD[id].name : id;
+  return `<div class="figwrap"><button type="button" class="figbtn" data-zoom="${id}" aria-label="Abbildung vergrößern, ${esc(name)}">${figPicture(id)}</button><div class="cued"><div><b>Start</b> ${esc(cue[0])}</div><div><b>Ende</b> ${esc(cue[1])}</div></div><div class="legend"><i></i>Rot zeigt den Zielmuskel. Tippen vergrößert.</div></div>`;
 }
 function openZoom(id, mode) {
   Z = { id, mode: mode || "both", scale: 1 };
@@ -316,13 +356,17 @@ function openZoom(id, mode) {
   $("#zoom").classList.add("on");
   document.body.style.overflow = "hidden";
 }
+function applyZoomScale() {
+  const stage = $("#zstage"); if (!stage) return;
+  const node = stage.querySelector(".crop") || stage.querySelector("img");
+  if (node) node.style.transform = "scale(" + Z.scale + ")";
+}
 function paintZoom() {
   const stage = $("#zstage"); if (!stage || !Z.id) return;
-  stage.innerHTML = FIG.illustration(Z.id, Z.mode);
-  const cue = FIG.cue(Z.id) || ["", ""];
+  stage.innerHTML = figPicture(Z.id, Z.mode);
+  const cue = CUE[Z.id] || ["", ""];
   $("#zcues").innerHTML = `<div><b>Start</b> ${esc(cue[0])}</div><div><b>Ende</b> ${esc(cue[1])}</div>`;
-  const svg = stage.querySelector("svg");
-  if (svg) svg.style.transform = "scale(" + Z.scale + ")";
+  applyZoomScale();
   $("#zboth").classList.toggle("on", Z.mode === "both");
   $("#zstart").classList.toggle("on", Z.mode === "start");
   $("#zend").classList.toggle("on", Z.mode === "end");
@@ -674,7 +718,7 @@ function vMehr() {
   <div class="card"><h2>💾 Daten</h2><div class="sm mu">Alles bleibt auf diesem Gerät (localStorage). Exportiere regelmäßig als Sicherung, z.B. nach jedem Check.</div>
   <div class="grid2" style="margin-top:10px"><button class="btn sec" data-export>Exportieren</button><label class="btn sec">Importieren<input type="file" accept="application/json,.json" data-import style="display:none"></label></div>
   <button class="btn warn full" style="margin-top:8px" data-reset>Alle Daten zurücksetzen</button></div>
-  <div class="card"><h2>ℹ️ Über die App</h2><div class="sm">Franz Fitness v4 · Plan Woche 1 bis 21. Tag 1 ist Freitag 20.11.2026 mit Einheit A, Ende Sonntag 11.4.2027. Deload in Woche 12 vom 1.2. bis 7.2.2027. Körperfett in den Wochen 4, 8, 12, 16, 20 und 21. Offline, ohne Konto, ohne Tracker. Übungsbilder sind eigene Skizzen mit rotem Zielmuskel, keine Einweisung. Core Training gibt Tagespunkte und einen Wochenbonus. Alle Zahlen sind Richtwerte, bei Beschwerden Arzt fragen.</div></div>` + historyCard();
+  <div class="card"><h2>ℹ️ Über die App</h2><div class="sm">Franz Fitness v5 · Plan Woche 1 bis 21. Tag 1 ist Freitag 20.11.2026 mit Einheit A, Ende Sonntag 11.4.2027. Deload in Woche 12 vom 1.2. bis 7.2.2027. Körperfett in den Wochen 4, 8, 12, 16, 20 und 21. Offline, ohne Konto, ohne Tracker. Übungsbilder sind eigene Abbildungen mit rotem Zielmuskel, keine Einweisung. Core Training gibt Tagespunkte und einen Wochenbonus. Alle Zahlen sind Richtwerte, bei Beschwerden Arzt fragen.</div></div>` + historyCard();
 }
 function historyCard() {
   const a = S.archive;
@@ -806,8 +850,7 @@ if (/^https?:/.test(location.protocol)) {
   const l = document.createElement("link"); l.rel = "manifest"; l.href = "manifest.json"; document.head.appendChild(l);
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => { });
 }
-window.FIG = FIG;
-window.FF = { S: () => S, stats, xpInfo, badges, records, okWeek, kraftCount, sess, setsFor, save, load, render, coreCount, coreGoal, coreOk, hasFig: id => FIG.has(id), exerciseIds: () => EXDATA.map(e => e.id) };
+window.FF = { S: () => S, stats, xpInfo, badges, records, okWeek, kraftCount, sess, setsFor, save, load, render, coreCount, coreGoal, coreOk, hasFig, exerciseIds: () => EXDATA.map(e => e.id) };
 (function () {
   const stage = $("#zstage"); if (!stage) return;
   let pinch = null;
@@ -817,7 +860,7 @@ window.FF = { S: () => S, stats, xpInfo, badges, records, okWeek, kraftCount, se
     if (ev.touches.length === 2 && pinch) {
       ev.preventDefault();
       Z.scale = Math.min(4, Math.max(1, pinch.s * dist(ev.touches) / pinch.d));
-      const svg = stage.querySelector("svg"); if (svg) svg.style.transform = "scale(" + Z.scale + ")";
+      applyZoomScale();
     }
   }, { passive: false });
   stage.addEventListener("touchend", () => { pinch = null; });
@@ -825,6 +868,6 @@ window.FF = { S: () => S, stats, xpInfo, badges, records, okWeek, kraftCount, se
     if (!$("#zoom").classList.contains("on")) return;
     ev.preventDefault();
     Z.scale = Math.min(4, Math.max(1, Z.scale + (ev.deltaY < 0 ? 0.12 : -0.12)));
-    const svg = stage.querySelector("svg"); if (svg) svg.style.transform = "scale(" + Z.scale + ")";
+    applyZoomScale();
   }, { passive: false });
 })();

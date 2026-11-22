@@ -36,7 +36,7 @@ input:focus,select:focus{outline:none;border-color:var(--te)}
 .exn{font-weight:800;font-size:18px;line-height:1.2}
 .figwrap{margin-top:8px;border-radius:16px;overflow:hidden;background:#fff;border:2px solid #fff}
 .figbtn{display:block;width:100%;padding:0;background:#fff;line-height:0}
-.figbtn svg,.fig{display:block;width:100%;height:auto;background:#fff}
+.figbtn img.fig,.fig{display:block;width:100%;height:auto;background:#fff}
 .cued{background:#fff;color:#111}
 .cued div{padding:8px 12px 9px;font-size:20px;font-weight:800;line-height:1.15}
 .cued b{display:inline-block;min-width:64px;margin-right:6px;color:#9d1020;font-size:15px;letter-spacing:.04em}
@@ -87,7 +87,10 @@ input:focus,select:focus{outline:none;border-color:var(--te)}
 .zoombar button{flex:1;min-height:52px;border-radius:12px;background:#fff;color:#111;font-weight:800;font-size:16px}
 .zoombar button.on{background:#ffe14a;color:#111}
 .zstage{flex:1;overflow:auto;background:#fff;display:flex;align-items:center;justify-content:center;touch-action:none}
-.zstage svg{width:100%;height:auto;transform-origin:center center}
+.zstage img.fig,.zstage .crop{width:100%;height:auto;transform-origin:center center;background:#fff}
+.zstage .crop{overflow:hidden}
+.zstage .crop img{width:200%;max-width:none}
+.zstage .crop.end img{margin-left:-100%}
 .zcues{background:#fff;color:#111;border-top:3px solid #111;padding-bottom:calc(8px + var(--safe-b))}
 .zcues div{padding:8px 14px;font-size:24px;font-weight:900;line-height:1.15}
 .zcues b{display:inline-block;min-width:72px;margin-right:8px;color:#9d1020;font-size:16px}

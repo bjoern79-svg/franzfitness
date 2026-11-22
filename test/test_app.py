@@ -60,7 +60,7 @@ with sync_playwright() as p:
     pg.click('[data-guide="kh_bank"]')
     pg.wait_for_timeout(200)
     sheet = pg.inner_text("#sheet")
-    ok("Anleitung mit Bild und Ersatz", "Typische Fehler" in sheet and "Insignia Series Chest Press" in sheet and pg.locator("#sheet svg.fig").count() == 1)
+    ok("Anleitung mit Bild und Ersatz", "Typische Fehler" in sheet and "Insignia Series Chest Press" in sheet and pg.locator("#sheet img.fig").count() == 1)
     ok("Anleitung groß und mit Stichwort", "An der Brust" in sheet and "Rot zeigt den Zielmuskel" in sheet)
     ok("Jede Übung hat eine eigene Skizze", pg.evaluate("() => FF.exerciseIds().every(id => FF.hasFig(id))"))
     pg.click("[data-close]")
