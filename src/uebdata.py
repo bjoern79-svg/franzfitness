@@ -188,9 +188,9 @@ EX = json.loads(r'''[
   "id": "deadbug",
   "name": "Dead Bug (Option, Bauch)",
   "grp": "ruecken",
-  "plan": "Optional am Ende von Einheit A",
-  "saetze": "2",
-  "wdh": "6 bis 10 je Seite",
+  "plan": "Core Training und optional nach Einheit A",
+  "saetze": "1",
+  "wdh": "6 bis 8 je Seite",
   "pause": "45 s",
   "rir": "sauber",
   "start": "Rückenlage, Arme hoch, Beine im 90 Grad Winkel",
@@ -535,8 +535,8 @@ EX = json.loads(r'''[
   "id": "plank",
   "name": "Plank (Unterarmstütz)",
   "grp": "hotel",
-  "plan": "Optional am Ende von Einheit A",
-  "saetze": "2",
+  "plan": "Core Training, Hotel und optional nach Einheit A",
+  "saetze": "1",
   "wdh": "20 bis 40 s",
   "wl": "Halten",
   "pause": "45 bis 60 s",
@@ -708,6 +708,133 @@ EX = json.loads(r'''[
   ],
   "sek": [],
   "ziel": "Trizeps an der Insignia Series Triceps Extension"
+ },
+ {
+  "id": "seitstutz",
+  "name": "Seitstütz",
+  "grp": "core",
+  "plan": "Core Training",
+  "saetze": "1",
+  "wdh": "15 bis 30 s je Seite",
+  "wl": "Halten",
+  "pause": "kurz",
+  "rir": "sauber",
+  "start": "Unterarm unter der Schulter, Knie oder Füße am Boden",
+  "ende": "Hüfte hoch, Körper eine Linie, Bauch fest",
+  "punkte": [
+   "Ellbogen unter der Schulter",
+   "Hüfte hochschieben, nicht hängen lassen",
+   "Oben ruhig atmen",
+   "Seite wechseln"
+  ],
+  "fehler": [
+   "Hüfte sackt nach unten",
+   "Kopf hängt in den Nacken"
+  ],
+  "prim": ["obliques", "abs"],
+  "sek": [],
+  "ziel": "Seitliche Bauchmuskeln und Rumpf"
+ },
+ {
+  "id": "birddog",
+  "name": "Bird Dog",
+  "grp": "core",
+  "plan": "Core Training",
+  "saetze": "1",
+  "wdh": "6 bis 8 je Seite",
+  "pause": "kurz",
+  "rir": "sauber",
+  "start": "Auf Händen und Knien, Rücken gerade",
+  "ende": "Ein Arm nach vorn, das Gegenbein nach hinten",
+  "punkte": [
+   "Hände unter den Schultern, Knie unter der Hüfte",
+   "Bauch fest, Becken bleibt ruhig",
+   "Arm und Gegenbein langsam strecken",
+   "Kurz halten, dann Seite wechseln"
+  ],
+  "fehler": [
+   "Das Becken kippt zur Seite",
+   "Hohlkreuz, statt den Bauch festzuhalten"
+  ],
+  "prim": ["abs", "erectors", "glutes"],
+  "sek": [],
+  "ziel": "Tiefer Bauch, Rücken und Gesäß"
+ },
+ {
+  "id": "crunch",
+  "name": "Crunch",
+  "grp": "core",
+  "plan": "Core Training",
+  "saetze": "1",
+  "wdh": "8 bis 12",
+  "pause": "kurz",
+  "rir": "sauber",
+  "start": "Rücken liegt, Knie gebeugt, Füße am Boden",
+  "ende": "Schultern heben ein Stück vom Boden ab",
+  "punkte": [
+   "Unteren Rücken am Boden lassen",
+   "Nur die Schultern anheben, nicht aufrichten",
+   "Ausatmen beim Hochgehen",
+   "Langsam wieder ablegen"
+  ],
+  "fehler": [
+   "Am Kopf ziehen",
+   "Schwung aus der Hüfte"
+  ],
+  "prim": ["abs"],
+  "sek": [],
+  "ziel": "Gerader Bauchmuskel"
+ },
+ {
+  "id": "revcrunch",
+  "name": "Reverse Crunch",
+  "grp": "core",
+  "plan": "Core Training",
+  "saetze": "1",
+  "wdh": "8 bis 12",
+  "pause": "kurz",
+  "rir": "sauber",
+  "start": "Rücken liegt, Beine oben angewinkelt",
+  "ende": "Hüfte hebt leicht vom Boden, Knie zur Brust",
+  "punkte": [
+   "Hände neben dem Körper oder leicht unter dem Becken",
+   "Knie bleiben gebeugt",
+   "Nur die Hüfte einrollen, nicht schwingen",
+   "Langsam wieder ablassen, Rücken bleibt flach"
+  ],
+  "fehler": [
+   "Beine schwingen weit hoch",
+   "Der untere Rücken hebt unkontrolliert ab"
+  ],
+  "prim": ["abs"],
+  "sek": [],
+  "ziel": "Unterer Anteil des geraden Bauchmuskels"
+ },
+ {
+  "id": "pallof",
+  "name": "Pallof Press",
+  "grp": "core",
+  "plan": "Core Training",
+  "saetze": "1",
+  "wdh": "8 bis 12 je Seite",
+  "pause": "kurz",
+  "rir": "sauber",
+  "start": "Seitlich zum Kabel oder Band, Hände an der Brust",
+  "ende": "Arme nach vorn strecken, Rumpf dreht nicht mit",
+  "punkte": [
+   "Kabel oder Band etwa auf Brusthöhe",
+   "Zu Hause geht ein Band in der Tür",
+   "Bauch fest, Knie leicht gebeugt",
+   "Arme strecken und langsam zurück, Seite wechseln"
+  ],
+  "fehler": [
+   "Der Oberkörper dreht zum Zug hin",
+   "Die Schultern ziehen hoch"
+  ],
+  "prim": ["abs", "obliques"],
+  "sek": [],
+  "ziel": "Bauch und seitliche Rumpfmuskeln, ohne sich zu drehen",
+  "ersatz": "Band in der Tür, wenn kein Kabel da ist"
  }
 ]''')
 FALLBACK = ["deadbug", "multipresse"]
