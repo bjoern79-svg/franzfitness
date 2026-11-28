@@ -66,11 +66,12 @@ with sync_playwright() as p:
     pg.click("[data-close]")
     links = pg.evaluate("""() => [...document.querySelectorAll('a.vlink')].map(a => ({t: a.textContent, h: a.href, target: a.target, rel: a.rel}))""")
     ok("Video ansehen öffnet in neuem Tab", bool(links) and all(x["t"] == "Video ansehen" and x["target"] == "_blank" and "noopener" in x["rel"] and "https://www.youtube.com/watch?v=" in x["h"] for x in links), str(len(links)))
-    ok("Bankdrücken hat ein geprüftes Video", any("Y0K5vP19d-w" in x["h"] for x in links))
-    ok("Ohne passendes Video kein Link", pg.evaluate("""() => {
+    ok("Bankdrücken hat ein geprüftes Video", any("M0tN99QgPyU" in x["h"] for x in links))
+    ok("Schrägpresse und Kurzhantelrudern haben ein Video", pg.evaluate("""() => {
       const row = [...document.querySelectorAll('.ex')].find(b => b.textContent.includes('Schrägpresse scheibenbeladen'));
       const rud = [...document.querySelectorAll('.ex')].find(b => b.textContent.includes('Kurzhantelrudern'));
-      return !!row && !!rud && row.querySelectorAll('a.vlink').length === 0 && rud.querySelectorAll('a.vlink').length === 0;
+      const href = el => (el && el.querySelector('a.vlink') || {}).href || '';
+      return !!row && !!rud && href(row).includes('bmV0SFxoJ30') && href(rud).includes('zTd2ifhrQcI');
     }"""))
     ok("Woche 1 Freitag und Sonntag", pg.evaluate("""() => {
       const a = FF.sess(1,0), b = FF.sess(1,1);
