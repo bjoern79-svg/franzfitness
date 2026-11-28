@@ -73,7 +73,36 @@ function weekOf(d) { return Math.floor(Math.round((d - START) / 864e5) / 7) + 1;
 function wDate(w, d) { return addD(START, 7 * (w - 1) + d); }
 function fmt(d) { return d.getDate() + "." + (d.getMonth() + 1) + "."; }
 function fmtL(d) { return DAYN[(d.getDay() + 6) % 7] + " " + fmt(d); }
-function same(a, b) { return a.getTime() === b.getTime(); }
+function same(a, b) { return a && b && a.getTime() === b.getTime(); }
+/* Lokaler Kalendertag. Nie toISOString: das ist UTC und schiebt den Tag,
+   abends in America/Sao_Paulo nach vorn, morgens in Europa/Berlin nach hinten. */
+function localDay(ts) {
+  const d = new Date(ts);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+function ymdStr(d) {
+  const p = n => String(n).padStart(2, "0");
+  return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+}
+function stampDone(ts) {
+  const d = new Date(ts == null ? Date.now() : ts);
+  return { t: d.getTime(), y: d.getFullYear(), m: d.getMonth() + 1, d: d.getDate() };
+}
+function doneValue(v) {
+  if (v == null || v === false || v === true) return null;
+  if (typeof v === "number" && isFinite(v)) return { t: v, date: localDay(v) };
+  if (typeof v === "object") {
+    const y = +v.y, m = +v.m, day = +v.d;
+    if (y > 1900 && m >= 1 && m <= 12 && day >= 1 && day <= 31) return { t: typeof v.t === "number" ? v.t : null, date: new Date(y, m - 1, day) };
+    if (typeof v.t === "number" && isFinite(v.t)) return { t: v.t, date: localDay(v.t) };
+  }
+  return null;
+}
+function shownDate(se) {
+  if (!se) return null;
+  const info = doneValue(S.done[se.k]);
+  return info ? info.date : se.date;
+}
 function phase(w) { return w <= 3 ? "Einstieg" : w <= 9 ? "Aufbau" : w <= 11 ? "Steigerung" : w === 12 ? "Deload und Check" : w <= 20 ? "Progression" : "Abschluss"; }
 function stepsGoal(w) { return w <= 4 ? 8000 : w <= 12 ? 9000 : 10000; }
 function planSlots(w) {
@@ -224,10 +253,17 @@ function stats() {
   return { weekStreak, bestWeek, sessStreak, total: ss.filter(Boolean).length };
 }
 function e1rm(kg, r) { return kg * (1 + r / 30); }
-function allLogs() { // chronologisch: [{k,w,s,date,id,sets}]
+function allLogs() { // chronologisch: [{k,w,s,date,id,sets}] Datum ist der lokale Tag der Einheit, nicht der Plan-Tag
   const out = [];
   Object.keys(S.logs).forEach(k => { const [w, s] = k.split(":").map(Number); const se = sess(w, s); if (!se) return;
-    Object.keys(S.logs[k]).forEach(id => { const sets = (S.logs[k][id] || []).filter(x => x && x.done); if (sets.length) out.push({ k, w, s, date: se.date, id, sets }); }); });
+    Object.keys(S.logs[k]).forEach(id => {
+      const sets = (S.logs[k][id] || []).filter(x => x && x.done);
+      if (!sets.length) return;
+      const info = doneValue(S.done[k]);
+      const times = sets.map(x => x.t).filter(t => typeof t === "number" && isFinite(t));
+      const date = info ? info.date : (times.length ? localDay(Math.min.apply(null, times)) : se.date);
+      out.push({ k, w, s, date, id, sets });
+    }); });
   return out.sort((a, b) => a.date - b.date || a.w - b.w || a.s - b.s);
 }
 function records() { // Bestleistung = neues Hoechstgewicht bei mindestens unterer Wiederholungszahl, max. 1 pro Uebung und Einheit
@@ -349,6 +385,12 @@ function figBlock(id) {
   const cue = CUE[id] || ["", ""];
   const name = EXD[id] ? EXD[id].name : id;
   return `<div class="figwrap"><button type="button" class="figbtn" data-zoom="${id}" aria-label="Abbildung vergrößern, ${esc(name)}">${figPicture(id)}</button><div class="cued"><div><b>Start</b> ${esc(cue[0])}</div><div><b>Ende</b> ${esc(cue[1])}</div></div><div class="legend"><i></i>Rot zeigt den Zielmuskel. Tippen vergrößert.</div></div>`;
+}
+function videoLink(id) {
+  const e = EXD[id];
+  const url = e && e.video;
+  if (!url || !/^https:\/\/www\.youtube\.com\/watch\?v=[\w-]{6,}$/.test(url)) return "";
+  return `<a class="vlink" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Video ansehen</a>`;
 }
 function openZoom(id, mode) {
   Z = { id, mode: mode || "both", scale: 1 };
@@ -542,7 +584,7 @@ function vHeute() {
   // Einheiten der Woche
   const wsel = sel.w;
   h += `<div class="card"><h2>Einheiten Woche ${wsel}</h2><div class="grid3">` + weekSess(wsel).map(x => `<button class="btn ${x.k === sel.k ? "" : "sec"}" data-open="${x.k}" style="flex-direction:column;gap:0;padding:8px 4px">
-    <span style="font-size:13px">${fmtL(x.date)}</span><span>${unitName(x.unit).replace("Einheit ", "")}${isDone(x.w, x.s) ? " ✅" : ""}</span></button>`).join("") + `</div>
+    <span style="font-size:13px">${fmtL(shownDate(x))}</span><span>${unitName(x.unit).replace("Einheit ", "")}${isDone(x.w, x.s) ? " ✅" : ""}</span></button>`).join("") + `</div>
     <div class="row sp" style="margin-top:8px"><button class="btn sec" data-wk="${Math.max(1, wsel - 1)}">◀ Woche</button><span class="sm mu">${fmt(wDate(wsel, 0))} bis ${fmt(wDate(wsel, 6))}</span><button class="btn sec" data-wk="${Math.min(TOTAL, wsel + 1)}">Woche ▶</button></div></div>`;
   h += vSession(sel);
   h += vCore();
@@ -551,7 +593,9 @@ function vHeute() {
 }
 function vSession(se) {
   const u = se.unit, list = UNITS[u], lg = S.logs[se.k] || {};
-  let h = `<div class="card" id="sess"><div class="row sp"><div class="row">${unitBadge(u)}<div><h2 style="margin:0">${unitName(u)}</h2><div class="sm mu">${DAYL[se.d]} ${fmt(se.date)} · RIR ${u === "H" ? "1 bis 2" : rir(se.w)}${se.w === 12 && u !== "H" ? " · Deload" : ""}</div></div></div>
+  const when = shownDate(se);
+  const planNote = isDone(se.w, se.s) && !same(when, se.date) ? " · Plan war " + fmtL(se.date) : "";
+  let h = `<div class="card" id="sess"><div class="row sp"><div class="row">${unitBadge(u)}<div><h2 style="margin:0">${unitName(u)}</h2><div class="sm mu">${DAYL[(when.getDay() + 6) % 7]} ${fmt(when)} · RIR ${u === "H" ? "1 bis 2" : rir(se.w)}${se.w === 12 && u !== "H" ? " · Deload" : ""}${planNote}</div></div></div>
   ${isDone(se.w, se.s) ? '<span class="chip g">erledigt</span>' : ""}</div>`;
   if (se.note) h += `<div class="note">${esc(se.note)}</div>`;
   if (u === "H") h += `<div class="sm mu" style="margin-top:6px">3 Runden, 45 bis 60 Sekunden Pause. Freiwillig, ersetzt keine Programmeinheit.</div>`;
@@ -564,6 +608,7 @@ function vSession(se) {
     h += `<div class="ex"><div class="exh" data-guide="${def.id}"><div class="exn">${i + 1}. ${esc(e.name)}</div>
       <div class="row wrapc" style="gap:4px;margin-top:4px"><span class="chip">${n} × ${esc(e.wdh)}</span><span class="chip">Pause ${esc(e.pause)}</span><span class="chip b">Anleitung ›</span></div>
       ${e.ersatz ? `<div class="xs mu" style="margin-top:4px">Ersatz: ${esc(e.ersatz)}</div>` : ""}</div>
+      ${videoLink(def.id)}
       ${figBlock(def.id)}
       <div class="last">${esc(lastTxt)}</div>${hint ? `<div class="hint g">⬆️ ${esc(hint.t)}</div>` : ""}<div class="sets">`;
     const rows = Math.max(n, cur.length);
@@ -602,11 +647,12 @@ function vCore() {
   <div class="xs mu" style="margin-top:6px">Woche 1: 2 Tage reichen. Ab Woche 2 sind 4 das Ziel und 5 ein Extra.${CS.streak ? " Core Serie: " + CS.streak + (CS.streak === 1 ? " Woche." : " Wochen.") : ""}</div>
   <div class="sm" style="margin-top:12px;font-weight:800">${esc(EXD[cur.id].name)}</div>
   <div class="xs mu">${esc(cur.reps)}</div>
+  ${videoLink(cur.id)}
   ${figBlock(cur.id)}
   <div class="corelist">`;
   CORE.forEach((c, i) => {
     const on = !!bag[c.id];
-    h += `<div class="core-ex ${c.id === focus ? "cur" : ""}"><button type="button" class="box ${on ? "on" : ""}" data-coreex="${c.id}" aria-label="${esc(EXD[c.id].name)} geschafft">${on ? "✓" : ""}</button><button type="button" class="core-name" data-coreshow="${c.id}"><b>${i + 1}. ${esc(EXD[c.id].name)}</b><span class="xs mu">${esc(c.reps)}</span></button></div>`;
+    h += `<div class="core-ex ${c.id === focus ? "cur" : ""}"><button type="button" class="box ${on ? "on" : ""}" data-coreex="${c.id}" aria-label="${esc(EXD[c.id].name)} geschafft">${on ? "✓" : ""}</button><button type="button" class="core-name" data-coreshow="${c.id}"><b>${i + 1}. ${esc(EXD[c.id].name)}</b><span class="xs mu">${esc(c.reps)}</span></button>${videoLink(c.id)}</div>`;
   });
   return h + `</div></div>`;
 }
@@ -639,7 +685,11 @@ function vWoche() {
 }
 function vWeekDetail(w) {
   let h = `<div class="card" style="background:var(--p2);margin:6px 0 10px"><div class="sm mu">Tippen zum Abhaken (ohne Satzdaten möglich)</div>`;
-  weekSess(w).forEach(x => { h += tickRow("done:" + x.k, fmtL(x.date) + " · " + unitName(x.unit), x.note || (x.shifted ? "verschoben" : "laut Plan"), isDone(x.w, x.s)); });
+  weekSess(w).forEach(x => {
+    const when = shownDate(x);
+    const sub = x.note || (isDone(x.w, x.s) && !same(when, x.date) ? "Plan war " + fmtL(x.date) : (x.shifted ? "verschoben" : "laut Plan"));
+    h += tickRow("done:" + x.k, fmtL(when) + " · " + unitName(x.unit), sub, isDone(x.w, x.s));
+  });
   h += tickRow(w + ":sw", "Schwimmen", "Do", act(w, "sw")) + tickRow(w + ":jo", "Joggen", "locker", act(w, "jo")) + tickRow(w + ":hw", "Hotel Workout", "freiwillig, ersetzt keine Programmeinheit", act(w, "hw"));
   h += `<div class="sm" style="margin-top:8px">Schritte ${stepsGoal(w).toLocaleString("de-DE")} pro Tag</div><div class="days">` + DAYN.map((d, i) => `<button class="${act(w, "st" + i) ? "on" : ""}" data-act="${w}:st${i}">${d}</button>`).join("") + `</div>
    <div class="sm" style="margin-top:8px">Eiweiß 160 bis 190 g</div><div class="days">` + DAYN.map((d, i) => `<button class="${act(w, "pr" + i) ? "on" : ""}" data-act="${w}:pr${i}">${d}</button>`).join("") + `</div>
@@ -727,7 +777,8 @@ function historyCard() {
   if (!sessA.length && !mk.length) return "";
   let h = `<div class="card"><h2>Frühere Einträge</h2><div class="sm mu">Bleiben gespeichert. Einträge vor dem 20.11.2026 zählen nicht als Programmtage.</div>`;
   sessA.forEach(s => {
-    const d = s.t ? new Date(s.t) : null;
+    const info = doneValue(s.done);
+    const d = info ? info.date : (typeof s.t === "number" ? localDay(s.t) : null);
     const bits = [];
     Object.keys(s.logs || {}).forEach(id => {
       const sets = (s.logs[id] || []).filter(x => x && x.done);
@@ -745,6 +796,7 @@ function guide(id) {
   if (!e) return;
   $("#sheet").innerHTML = `<div class="row sp" style="margin-bottom:8px"><h2 style="margin:0;font-size:22px">${esc(e.name)}</h2><button class="btn sec" data-close style="padding:8px 14px;min-height:48px">Schließen</button></div>
   ${figBlock(id)}
+  ${videoLink(id)}
   <div class="grid2 sm" style="margin-top:8px"><div><b>Start:</b> ${esc(e.start)}</div><div><b>Ende:</b> ${esc(e.ende)}</div></div>
   <div class="row wrapc" style="gap:4px;margin:10px 0"><span class="chip">${esc(e.plan)}</span><span class="chip">Sätze ${esc(e.saetze)}</span><span class="chip">${esc(e.wl || "Wdh.")} ${esc(e.wdh)}</span><span class="chip">Pause ${esc(e.pause)}</span><span class="chip g">RIR ${esc(e.rir)}</span></div>
   <h3>So geht's</h3>${e.punkte.map(p => `<div class="li"><span style="color:var(--te)">✓</span><span>${esc(p)}</span></div>`).join("")}
@@ -756,6 +808,7 @@ function guide(id) {
 /* ---------- Events ---------- */
 function setLog(k, id, j, field, val) { S.logs[k] = S.logs[k] || {}; const a = S.logs[k][id] = S.logs[k][id] || []; a[j] = a[j] || {}; a[j][field] = val; }
 document.addEventListener("click", ev => {
+  if (ev.target.closest("a[href]")) return;
   const t = ev.target.closest("[data-tab],[data-open],[data-wk],[data-guide],[data-zoom],[data-set],[data-add],[data-finish],[data-act],[data-coreex],[data-coreshow],[data-wkopen],[data-gow],[data-pw],[data-we],[data-shift],[data-unshift],[data-export],[data-reset],[data-close],#tstop,#tplus,#tstart,#tskip,#tfull,#tclose,#zclose,#zin,#zout,#zboth,#zstart,#zend,#modal");
   if (!t) return;
   const d = t.dataset;
@@ -795,7 +848,7 @@ document.addEventListener("click", ev => {
   if (d.finish) { const [w, s] = d.finish.split(":").map(Number), se = sess(w, s);
     if (!se) return;
     if (S.done[d.finish]) { delete S.done[d.finish]; if (se.unit === "H") S.act[w + ":hw"] = false; save(); render(); return; }
-    S.done[d.finish] = Date.now(); if (se.unit === "H") S.act[w + ":hw"] = true; save(); confetti(false); toast(se.unit === "H" ? "Hotel Held! +" + XP.hotel + " XP" : "Einheit geschafft! +" + XP.session + " XP"); celebrateCheck(); render(); return; }
+    S.done[d.finish] = stampDone(); if (se.unit === "H") S.act[w + ":hw"] = true; save(); confetti(false); toast(se.unit === "H" ? "Hotel Held! +" + XP.hotel + " XP" : "Einheit geschafft! +" + XP.session + " XP"); celebrateCheck(); render(); return; }
   if (d.coreex || d.coreshow) {
     const sl = todaySlot(), key = sl.w + ":" + sl.d;
     if (d.coreshow) coreFocus = d.coreshow;
@@ -810,7 +863,7 @@ document.addEventListener("click", ev => {
     return;
   }
   if (d.act) { const key = d.act;
-    if (key.startsWith("done:")) { const k = key.slice(5), [w, s] = k.split(":").map(Number); if (S.done[k]) delete S.done[k]; else S.done[k] = Date.now(); if (sess(w, s) && sess(w, s).unit === "H") S.act[w + ":hw"] = !!S.done[k]; }
+    if (key.startsWith("done:")) { const k = key.slice(5), [w, s] = k.split(":").map(Number); if (S.done[k]) delete S.done[k]; else S.done[k] = stampDone(); if (sess(w, s) && sess(w, s).unit === "H") S.act[w + ":hw"] = !!S.done[k]; }
     else S.act[key] = !S.act[key];
     save();
     const coreDay = /^\d+:co\d$/.test(key);
@@ -836,7 +889,7 @@ document.addEventListener("change", ev => {
   if (d.import !== undefined && t.files[0]) { const r = new FileReader(); r.onload = () => { try { const p = JSON.parse(r.result); if (!p || p.v !== 1 || !p.logs) throw 0; if (confirm("Import ersetzt die aktuellen Daten auf diesem Gerät. Fortfahren?")) { S = Object.assign(blank(), p); S.set = Object.assign({ we: "sa", shift: {} }, p.set || {}); if (!p.cal) delete S.cal; migrate(); ensureShape(); save(); render(); toast("Import erfolgreich"); } } catch (e) { toast("Datei ist kein Franz Fitness Export"); } }; r.readAsText(t.files[0]); t.value = ""; }
 });
 function exportData() {
-  const name = "franz-fitness-" + new Date().toISOString().slice(0, 10) + ".json", blob = new Blob([JSON.stringify(Object.assign({ exportiert: new Date().toISOString(), app: "Franz Fitness v4" }, S), null, 1)], { type: "application/json" });
+  const name = "franz-fitness-" + ymdStr(new Date()) + ".json", blob = new Blob([JSON.stringify(Object.assign({ exportiert: new Date().toISOString(), app: "Franz Fitness v4" }, S), null, 1)], { type: "application/json" });
   try { const f = new File([blob], name, { type: "application/json" }); if (navigator.canShare && navigator.canShare({ files: [f] })) { navigator.share({ files: [f], title: "Franz Fitness Export" }).catch(() => dl(blob, name)); return; } } catch (e) { }
   dl(blob, name);
 }
@@ -850,7 +903,7 @@ if (/^https?:/.test(location.protocol)) {
   const l = document.createElement("link"); l.rel = "manifest"; l.href = "manifest.json"; document.head.appendChild(l);
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => { });
 }
-window.FF = { S: () => S, stats, xpInfo, badges, records, okWeek, kraftCount, sess, setsFor, save, load, render, coreCount, coreGoal, coreOk, hasFig, exerciseIds: () => EXDATA.map(e => e.id) };
+window.FF = { S: () => S, stats, xpInfo, badges, records, okWeek, kraftCount, sess, setsFor, save, load, render, coreCount, coreGoal, coreOk, hasFig, exerciseIds: () => EXDATA.map(e => e.id), localDay, stampDone, doneValue, ymdStr, shownDate: (w, s) => shownDate(sess(w, s)) };
 (function () {
   const stage = $("#zstage"); if (!stage) return;
   let pinch = null;

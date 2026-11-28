@@ -60,7 +60,8 @@ EX = json.loads(r'''[
    "triceps"
   ],
   "ziel": "Obere Brust, dazu vordere Schulter und Trizeps",
-  "ersatz": "Hammer Strength Iso Lateral Incline Press, wenn die Bank belegt ist"
+  "ersatz": "Hammer Strength Iso Lateral Incline Press, wenn die Bank belegt ist",
+  "video": "https://www.youtube.com/watch?v=X1IhMhOkWaw"
  },
  {
   "id": "multipresse",
@@ -90,7 +91,8 @@ EX = json.loads(r'''[
    "fdelt",
    "triceps"
   ],
-  "ziel": "Brust, dazu vordere Schulter und Trizeps"
+  "ziel": "Brust, dazu vordere Schulter und Trizeps",
+  "video": "https://www.youtube.com/watch?v=MlWrpIE26Rg"
  },
  {
   "id": "fliegende",
@@ -120,7 +122,8 @@ EX = json.loads(r'''[
    "fdelt"
   ],
   "ziel": "Brust, dazu vordere Schulter",
-  "ersatz": "Fliegende an der Kabelstation oder mit Kurzhanteln auf der Flachbank"
+  "ersatz": "Fliegende an der Kabelstation oder mit Kurzhanteln auf der Flachbank",
+  "video": "https://www.youtube.com/watch?v=dWGbgeGvTsI"
  },
  {
   "id": "latzug",
@@ -151,7 +154,8 @@ EX = json.loads(r'''[
    "traps"
   ],
   "ziel": "Breiter Rückenmuskel, dazu Bizeps und oberer Rücken",
-  "ersatz": "Latzug an der Kabelstation (Dual Adjustable Pulley)"
+  "ersatz": "Latzug an der Kabelstation (Dual Adjustable Pulley)",
+  "video": "https://www.youtube.com/watch?v=JUruRn5Y6Zc"
  },
  {
   "id": "rudern",
@@ -209,7 +213,8 @@ EX = json.loads(r'''[
    "abs"
   ],
   "sek": [],
-  "ziel": "Gerader und tiefer Bauch (Rumpfstabilität)"
+  "ziel": "Gerader und tiefer Bauch (Rumpfstabilität)",
+  "video": "https://www.youtube.com/watch?v=6BUVunRfJig"
  },
  {
   "id": "bizeps",
@@ -237,7 +242,8 @@ EX = json.loads(r'''[
   ],
   "sek": [],
   "ziel": "Bizeps",
-  "ersatz": "Insignia Series Biceps Curl"
+  "ersatz": "Insignia Series Biceps Curl",
+  "video": "https://www.youtube.com/watch?v=3b5AZfvdQ2I"
  },
  {
   "id": "hammer",
@@ -265,7 +271,8 @@ EX = json.loads(r'''[
   ],
   "sek": [],
   "ziel": "Bizeps und Unterarm (Brachialis)",
-  "ersatz": "Hammercurl mit Seil an der Kabelstation"
+  "ersatz": "Hammercurl mit Seil an der Kabelstation",
+  "video": "https://www.youtube.com/watch?v=vyraB4usDV8"
  },
  {
   "id": "trizeps_seil",
@@ -293,7 +300,8 @@ EX = json.loads(r'''[
   ],
   "sek": [],
   "ziel": "Trizeps",
-  "ersatz": "Insignia Series Triceps Press, oder Trizeps über Kopf mit Kurzhantel"
+  "ersatz": "Insignia Series Triceps Press, oder Trizeps über Kopf mit Kurzhantel",
+  "video": "https://www.youtube.com/watch?v=yk6VdVwww5k"
  },
  {
   "id": "trizeps_ueberkopf",
@@ -320,7 +328,8 @@ EX = json.loads(r'''[
    "triceps"
   ],
   "sek": [],
-  "ziel": "Trizeps, vor allem langer Kopf"
+  "ziel": "Trizeps, vor allem langer Kopf",
+  "video": "https://www.youtube.com/watch?v=yk6VdVwww5k"
  },
  {
   "id": "beinpresse",
@@ -350,7 +359,8 @@ EX = json.loads(r'''[
   "sek": [
    "hams"
   ],
-  "ziel": "Vorderer Oberschenkel und Gesäß"
+  "ziel": "Vorderer Oberschenkel und Gesäß",
+  "video": "https://www.youtube.com/watch?v=7_cmjJBw_Ig"
  },
  {
   "id": "goblet",
@@ -381,7 +391,8 @@ EX = json.loads(r'''[
    "abs"
   ],
   "ziel": "Vorderer Oberschenkel und Gesäß",
-  "ersatz": "Insignia Series Arc Leg Press"
+  "ersatz": "Insignia Series Arc Leg Press",
+  "video": "https://www.youtube.com/watch?v=I-41oPS373Y"
  },
  {
   "id": "rdl",
@@ -412,7 +423,8 @@ EX = json.loads(r'''[
    "traps"
   ],
   "ziel": "Hinterer Oberschenkel und Gesäß",
-  "ersatz": "Insignia Series Seated Leg Curl"
+  "ersatz": "Insignia Series Seated Leg Curl",
+  "video": "https://www.youtube.com/watch?v=1Bs6Xe6jTtg"
  },
  {
   "id": "hipthrust",
@@ -441,7 +453,8 @@ EX = json.loads(r'''[
   "sek": [
    "hams"
   ],
-  "ziel": "Gesäß, dazu hinterer Oberschenkel"
+  "ziel": "Gesäß, dazu hinterer Oberschenkel",
+  "video": "https://www.youtube.com/watch?v=Y0bmWyhsLXQ"
  },
  {
   "id": "liegestuetz",
@@ -471,7 +484,8 @@ EX = json.loads(r'''[
    "triceps",
    "fdelt"
   ],
-  "ziel": "Brust, dazu Trizeps und Schulter"
+  "ziel": "Brust, dazu Trizeps und Schulter",
+  "video": "https://www.youtube.com/watch?v=30j5spsInAk"
  },
  {
   "id": "bandrudern",
@@ -529,7 +543,8 @@ EX = json.loads(r'''[
    "glutes"
   ],
   "sek": [],
-  "ziel": "Oberschenkel und Gesäß"
+  "ziel": "Oberschenkel und Gesäß",
+  "video": "https://www.youtube.com/watch?v=Noj93QZFV_0"
  },
  {
   "id": "plank",
@@ -558,7 +573,8 @@ EX = json.loads(r'''[
   "sek": [
    "fdelt"
   ],
-  "ziel": "Bauch und Rumpf"
+  "ziel": "Bauch und Rumpf",
+  "video": "https://www.youtube.com/watch?v=JWfUAXO_8IU"
  },
  {
   "id": "kh_bank",
@@ -589,7 +605,8 @@ EX = json.loads(r'''[
    "fdelt",
    "triceps"
   ],
-  "ziel": "Brust, dazu vordere Schulter und Trizeps"
+  "ziel": "Brust, dazu vordere Schulter und Trizeps",
+  "video": "https://www.youtube.com/watch?v=Y0K5vP19d-w"
  },
  {
   "id": "hs_schraeg",
@@ -679,7 +696,8 @@ EX = json.loads(r'''[
    "mdelt"
   ],
   "sek": [],
-  "ziel": "Seitliche Schulter"
+  "ziel": "Seitliche Schulter",
+  "video": "https://www.youtube.com/watch?v=iT--Sq-G06M"
  },
  {
   "id": "trizeps_strecker",
@@ -731,9 +749,13 @@ EX = json.loads(r'''[
    "Hüfte sackt nach unten",
    "Kopf hängt in den Nacken"
   ],
-  "prim": ["obliques", "abs"],
+  "prim": [
+   "obliques",
+   "abs"
+  ],
   "sek": [],
-  "ziel": "Seitliche Bauchmuskeln und Rumpf"
+  "ziel": "Seitliche Bauchmuskeln und Rumpf",
+  "video": "https://www.youtube.com/watch?v=Ymn57t4z6ec"
  },
  {
   "id": "birddog",
@@ -756,7 +778,11 @@ EX = json.loads(r'''[
    "Das Becken kippt zur Seite",
    "Hohlkreuz, statt den Bauch festzuhalten"
   ],
-  "prim": ["abs", "erectors", "glutes"],
+  "prim": [
+   "abs",
+   "erectors",
+   "glutes"
+  ],
   "sek": [],
   "ziel": "Tiefer Bauch, Rücken und Gesäß"
  },
@@ -781,7 +807,9 @@ EX = json.loads(r'''[
    "Am Kopf ziehen",
    "Schwung aus der Hüfte"
   ],
-  "prim": ["abs"],
+  "prim": [
+   "abs"
+  ],
   "sek": [],
   "ziel": "Gerader Bauchmuskel"
  },
@@ -806,7 +834,9 @@ EX = json.loads(r'''[
    "Beine schwingen weit hoch",
    "Der untere Rücken hebt unkontrolliert ab"
   ],
-  "prim": ["abs"],
+  "prim": [
+   "abs"
+  ],
   "sek": [],
   "ziel": "Unterer Anteil des geraden Bauchmuskels"
  },
@@ -831,10 +861,14 @@ EX = json.loads(r'''[
    "Der Oberkörper dreht zum Zug hin",
    "Die Schultern ziehen hoch"
   ],
-  "prim": ["abs", "obliques"],
+  "prim": [
+   "abs",
+   "obliques"
+  ],
   "sek": [],
   "ziel": "Bauch und seitliche Rumpfmuskeln, ohne sich zu drehen",
-  "ersatz": "Band in der Tür, wenn kein Kabel da ist"
+  "ersatz": "Band in der Tür, wenn kein Kabel da ist",
+  "video": "https://www.youtube.com/watch?v=TyknsCFvJNQ"
  }
 ]''')
 FALLBACK = ["deadbug", "multipresse"]
