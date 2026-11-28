@@ -100,6 +100,21 @@
   ""
  ],
  [
+  "Video ansehen öffnet in neuem Tab",
+  true,
+  "11"
+ ],
+ [
+  "Bankdrücken hat ein geprüftes Video",
+  true,
+  ""
+ ],
+ [
+  "Ohne passendes Video kein Link",
+  true,
+  ""
+ ],
+ [
   "Woche 1 Freitag und Sonntag",
   true,
   ""
@@ -183,5 +198,40 @@
   "Laden per file:// ohne Fehler",
   true,
   ""
+ ],
+ [
+  "Sao Paulo: Dienstagabend ist nicht der UTC Mittwoch",
+  true,
+  "{\"utc\": \"2026-11-25\", \"localDate\": 24, \"localWd\": 2, \"shownDate\": 24, \"shownWd\": 2, \"planWd\": 3, \"planDate\": 25, \"keptNumber\": true, \"keptLog\": true}"
+ ],
+ [
+  "Anzeige nimmt den lokalen Tag, nicht den Plan Mittwoch",
+  true,
+  "{\"utc\": \"2026-11-25\", \"localDate\": 24, \"localWd\": 2, \"shownDate\": 24, \"shownWd\": 2, \"planWd\": 3, \"planDate\": 25, \"keptNumber\": true, \"keptLog\": true}"
+ ],
+ [
+  "Alter Zahlenstempel und Satz bleiben erhalten",
+  true,
+  "{\"utc\": \"2026-11-25\", \"localDate\": 24, \"localWd\": 2, \"shownDate\": 24, \"shownWd\": 2, \"planWd\": 3, \"planDate\": 25, \"keptNumber\": true, \"keptLog\": true}"
+ ],
+ [
+  "Wochenansicht zeigt Di 24.11. statt Mi",
+  true,
+  "Di 24.11. · Einheit B\nPlan war Mi 25.11.\nSa 28.11. · Einheit A\nlaut Plan\nSchwimm"
+ ],
+ [
+  "Nach Neuladen sind Eintrag und Satz noch da",
+  true,
+  ""
+ ],
+ [
+  "Berlin: Dienstag 0:30 bleibt Dienstag, UTC wäre Montag",
+  true,
+  "{\"utc\": \"2026-11-23\", \"localDate\": 24, \"localWd\": 2, \"stampD\": 24, \"stampM\": 11, \"stampY\": 2026, \"earlyDate\": 24, \"earlyWd\": 2, \"storedDate\": 24, \"storedWd\": 2, \"rawDay\": 24, \"rawLog\": 20}"
+ ],
+ [
+  "Gespeicherter lokaler Tag bleibt Dienstag, auch wenn der Zeitstempel in Berlin schon Mittwoch ist",
+  true,
+  "{\"utc\": \"2026-11-23\", \"localDate\": 24, \"localWd\": 2, \"stampD\": 24, \"stampM\": 11, \"stampY\": 2026, \"earlyDate\": 24, \"earlyWd\": 2, \"storedDate\": 24, \"storedWd\": 2, \"rawDay\": 24, \"rawLog\": 20}"
  ]
 ]

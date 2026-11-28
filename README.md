@@ -22,7 +22,7 @@ Karte 15, Life Fitness Geräte plus Freihantel, Ganzkörper A und B.
 6. **Mehr**: Samstag oder Sonntag als dritter Tag ab Woche 2, Einheiten verschieben, Export, Import, Zurücksetzen.
 
 ## Daten
-Alles liegt im `localStorage` des Browsers (Schlüssel `franz-fitness-app-v1`, unverändert, damit vorhandene Einträge erhalten bleiben). Einträge vor dem 20.11.2026 bleiben unter Frühere Einträge und zählen nicht als Programmtage. Der Offline Cache heißt `franz-fitness-v5`.
+Alles liegt im `localStorage` des Browsers (Schlüssel `franz-fitness-app-v1`, unverändert, damit vorhandene Einträge erhalten bleiben). Einträge vor dem 20.11.2026 bleiben unter Frühere Einträge und zählen nicht als Programmtage. Der Offline Cache heißt `franz-fitness-v7`.
 
 Übungsbilder sind eigene Abbildungen (Start und Ende, Zielmuskel rot) und liegen als WebP im Offline Cache. Core Training gibt 20 XP pro Tag, 50 XP ab dem Wochenziel (Woche 1: 2 Tage, danach 4) und 20 XP extra am Strecktag. Der Pausentimer zeigt große Ziffern, mit Vollbild und Wachhalten, wenn der Browser das kann.
 

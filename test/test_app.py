@@ -64,6 +64,14 @@ with sync_playwright() as p:
     ok("Anleitung groß und mit Stichwort", "An der Brust" in sheet and "Rot zeigt den Zielmuskel" in sheet)
     ok("Jede Übung hat eine eigene Skizze", pg.evaluate("() => FF.exerciseIds().every(id => FF.hasFig(id))"))
     pg.click("[data-close]")
+    links = pg.evaluate("""() => [...document.querySelectorAll('a.vlink')].map(a => ({t: a.textContent, h: a.href, target: a.target, rel: a.rel}))""")
+    ok("Video ansehen öffnet in neuem Tab", bool(links) and all(x["t"] == "Video ansehen" and x["target"] == "_blank" and "noopener" in x["rel"] and "https://www.youtube.com/watch?v=" in x["h"] for x in links), str(len(links)))
+    ok("Bankdrücken hat ein geprüftes Video", any("Y0K5vP19d-w" in x["h"] for x in links))
+    ok("Ohne passendes Video kein Link", pg.evaluate("""() => {
+      const row = [...document.querySelectorAll('.ex')].find(b => b.textContent.includes('Schrägpresse scheibenbeladen'));
+      const rud = [...document.querySelectorAll('.ex')].find(b => b.textContent.includes('Kurzhantelrudern'));
+      return !!row && !!rud && row.querySelectorAll('a.vlink').length === 0 && rud.querySelectorAll('a.vlink').length === 0;
+    }"""))
     ok("Woche 1 Freitag und Sonntag", pg.evaluate("""() => {
       const a = FF.sess(1,0), b = FF.sess(1,1);
       return a.date.getFullYear()===2026 && a.date.getMonth()===10 && a.date.getDate()===20 && a.date.getDay()===5 && a.unit==="A"
@@ -138,6 +146,87 @@ with sync_playwright() as p:
     pg.goto(ROOT.joinpath("index.html").as_uri())
     pg.wait_for_timeout(500)
     ok("Laden per file:// ohne Fehler", not e2 and "Franz Fitness" in pg.inner_text("body"), "; ".join(e2))
+    b.close()
+
+def tz_case(tz, script):
+    ctx = b.new_context(timezone_id=tz, viewport={"width": 390, "height": 844}, locale="de-DE")
+    pg = ctx.new_page()
+    pg.goto(URL + "?heute=2026-11-24")
+    pg.wait_for_timeout(400)
+    out = pg.evaluate(script)
+    ctx.close()
+    return out
+
+with sync_playwright() as p:
+    b = p.chromium.launch()
+    sao = tz_case("America/Sao_Paulo", """() => {
+      const ts = new Date(2026, 10, 24, 22, 30).getTime();
+      const utc = new Date(ts).toISOString().slice(0, 10);
+      const day = FF.localDay(ts);
+      const s = FF.S();
+      s.done = {"2:1": ts};
+      s.logs = {"2:1": {"hammer": [{kg: 12, r: 10, done: true, t: ts}]}};
+      FF.save();
+      const shown = FF.shownDate(2, 1);
+      const raw = JSON.parse(localStorage.getItem("franz-fitness-app-v1"));
+      return {
+        utc, localDate: day.getDate(), localWd: day.getDay(),
+        shownDate: shown.getDate(), shownWd: shown.getDay(),
+        planWd: FF.sess(2, 1).date.getDay(), planDate: FF.sess(2, 1).date.getDate(),
+        keptNumber: typeof raw.done["2:1"] === "number" && raw.done["2:1"] === ts,
+        keptLog: raw.logs["2:1"].hammer[0].kg === 12
+      };
+    }""")
+    ok("Sao Paulo: Dienstagabend ist nicht der UTC Mittwoch", sao["utc"] == "2026-11-25" and sao["localDate"] == 24 and sao["localWd"] == 2, json.dumps(sao))
+    ok("Anzeige nimmt den lokalen Tag, nicht den Plan Mittwoch", sao["planWd"] == 3 and sao["planDate"] == 25 and sao["shownDate"] == 24 and sao["shownWd"] == 2, json.dumps(sao))
+    ok("Alter Zahlenstempel und Satz bleiben erhalten", sao["keptNumber"] and sao["keptLog"], json.dumps(sao))
+    ctx = b.new_context(timezone_id="America/Sao_Paulo", viewport={"width": 390, "height": 844}, locale="de-DE")
+    pg = ctx.new_page()
+    pg.goto(URL + "?heute=2026-11-24")
+    pg.wait_for_timeout(300)
+    pg.evaluate("""() => {
+      const ts = new Date(2026, 10, 24, 22, 30).getTime();
+      const s = FF.S();
+      s.done = {"2:1": ts};
+      s.logs = {"2:1": {"hammer": [{kg: 12, r: 10, done: true, t: ts}]}};
+      FF.save();
+    }""")
+    pg.reload()
+    pg.wait_for_timeout(400)
+    pg.click('[data-tab="woche"]')
+    pg.click('[data-wkopen="2"]')
+    pg.wait_for_timeout(200)
+    week = pg.inner_text("#app")
+    ok("Wochenansicht zeigt Di 24.11. statt Mi", "Di 24.11." in week and "Plan war Mi 25.11." in week, week[week.find("Di"):week.find("Di")+80] if "Di" in week else week[:200])
+    kept = pg.evaluate("""() => {
+      const raw = JSON.parse(localStorage.getItem("franz-fitness-app-v1"));
+      return typeof raw.done["2:1"] === "number" && raw.logs["2:1"].hammer[0].r === 10;
+    }""")
+    ok("Nach Neuladen sind Eintrag und Satz noch da", kept)
+    ctx.close()
+    ber = tz_case("Europe/Berlin", """() => {
+      const early = new Date(2026, 10, 24, 0, 30).getTime();
+      const utc = new Date(early).toISOString().slice(0, 10);
+      const day = FF.localDay(early);
+      const stamp = FF.stampDone(early);
+      const stored = {t: Date.parse("2026-11-25T01:30:00.000Z"), y: 2026, m: 11, d: 24};
+      const s = FF.S();
+      s.done = {"2:1": stored, "2:0": early};
+      s.logs = {"2:0": {"kh_bank": [{kg: 20, r: 8, done: true, t: early}]}};
+      FF.save();
+      const raw = JSON.parse(localStorage.getItem("franz-fitness-app-v1"));
+      const earlyShown = FF.shownDate(2, 0);
+      const storedShown = FF.shownDate(2, 1);
+      return {
+        utc, localDate: day.getDate(), localWd: day.getDay(),
+        stampD: stamp.d, stampM: stamp.m, stampY: stamp.y,
+        earlyDate: earlyShown.getDate(), earlyWd: earlyShown.getDay(),
+        storedDate: storedShown.getDate(), storedWd: storedShown.getDay(),
+        rawDay: raw.done["2:1"].d, rawLog: raw.logs["2:0"].kh_bank[0].kg
+      };
+    }""")
+    ok("Berlin: Dienstag 0:30 bleibt Dienstag, UTC wäre Montag", ber["utc"] == "2026-11-23" and ber["localDate"] == 24 and ber["localWd"] == 2 and ber["stampD"] == 24 and ber["earlyDate"] == 24 and ber["earlyWd"] == 2, json.dumps(ber))
+    ok("Gespeicherter lokaler Tag bleibt Dienstag, auch wenn der Zeitstempel in Berlin schon Mittwoch ist", ber["storedDate"] == 24 and ber["storedWd"] == 2 and ber["rawDay"] == 24 and ber["rawLog"] == 20, json.dumps(ber))
     b.close()
 print("\n%d von %d bestanden" % (sum(r[1] for r in res), len(res)))
 json.dump(res, open(ROOT / "test" / "ergebnis.json", "w"), ensure_ascii=False, indent=1)
